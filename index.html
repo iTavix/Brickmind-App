@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BrickMind Dashboard</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* --- STILE iOS MINIMALISTA --- */
+        :root {
+            --bg-color: #f2f2f7; --card-bg: #ffffff; --text-main: #000000;
+            --text-sec: #8e8e93; --ios-blue: #007aff; --ios-green: #34c759;
+            --ios-purple: #af52de; --ios-orange: #ff9500;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 20px 16px;
+            display: flex; justify-content: center;
+        }
+
+        .app-container { max-width: 450px; width: 100%; padding-bottom: 40px; }
+        
+        /* ELEMENTI COMUNI */
+        .card { background-color: var(--card-bg); border-radius: 18px; padding: 20px; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+        .grid-2.no-margin { margin-bottom: 0; }
+        hr { border: none; border-top: 1px solid #e5e5ea; margin: 16px 0; }
+        
+        /* TESTI */
+        h1 { font-size: 28px; font-weight: 700; margin: 0; }
+        h2 { font-size: 20px; font-weight: 600; margin: 0 0 16px 0; }
+        .metric-title { color: var(--text-sec); font-size: 12px; font-weight: 600; text-transform: uppercase; margin-bottom: 4px; }
+        .metric-value { font-size: 28px; font-weight: 700; }
+        .metric-value.small { font-size: 20px; }
+        .green { color: var(--ios-green); } .purple { color: var(--ios-purple); } .orange { color: var(--ios-orange); }
+        
+        /* VISTE (Gestite dinamicamente dal JS) */
+        #startup-view { text-align: center; margin-top: 60px; }
+        #login-view { display: none; text-align: center; padding-top: 40px; }
+        #dashboard-view { display: none; }
+        
+        /* INPUT LOGIN */
+        .input-field { width: 100%; box-sizing: border-box; padding: 14px 16px; margin-bottom: 16px; border-radius: 12px; border: 1px solid #c7c7cc; font-size: 16px; outline: none; }
+        .btn-primary { width: 100%; background-color: var(--ios-blue); color: white; padding: 16px; border-radius: 14px; font-size: 17px; font-weight: 600; border: none; cursor: pointer; }
+        .btn-logout { background: none; color: #ff3b30; border: none; font-size: 15px; font-weight: 500; cursor: pointer; padding: 0;}
+        select { background-color: #e5e5ea; border: none; border-radius: 10px; padding: 8px 12px; font-size: 15px; font-weight: 600; color: var(--ios-blue); outline: none; }
+        
+        #error-box { background-color: #ffe5e5; color: #ff3b30; padding: 15px; border-radius: 10px; margin-top: 20px; font-weight: 600; display: none; }
+        .chart-container { position: relative; height: 220px; width: 100%; margin-top: 10px;}
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        
+        <div id="startup-view">
+            <h2>⚙️ Avvio App in corso...</h2>
+            <p style="color: var(--text-sec); font-size: 14px;">Inizializzazione dei moduli di sicurezza.</p>
+            <div id="error-box">Nessun errore.</div>
+        </div>
+
+        <div id="login-view">
+            <h1 style="font-size: 32px; margin-bottom: 8px;">BrickMind</h1>
+            <p style="color: var(--text-sec); margin-bottom: 30px;">Inserisci le tue credenziali Supabase</p>
+
+            <div id="login-error" style="color:#ff3b30; margin-bottom:15px; display:none; font-weight:bold;">Errore.</div>
+
+            <input type="email" id="email" class="input-field" placeholder="Email" autocomplete="email">
+            <input type="password" id="password" class="input-field" placeholder="Password">
+            
+            <button class="btn-primary" onclick="handleLogin()">Accedi</button>
+        </div>
+
+        <div id="dashboard-view">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin: 10px 0 20px 0;">
+                <h1>Dashboard</h1>
+                <select id="monthSelector" onchange="updateDashboardView()">
+                    <option value="ALL">Caricamento...</option>
+                </select>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <div id="db-status" style="font-size: 13px; font-weight: 500;">Inizializzazione...</div>
+                <button class="btn-logout" onclick="handleLogout()">Esci</button>
+            </div>
+
+            <div class="card">
+                <h2 id="card-title">Riepilogo Globale</h2>
+                <div class="metric-title">Ricavo Netto (Tutti)</div>
+                <div class="metric-value green" style="margin-bottom: 16px;" id="tot-netto">€ 0,00</div>
+
+                <div class="grid-2">
+                    <div><div class="metric-title">Ordini</div><div class="metric-value small" id="tot-ordini">0</div></div>
+                    <div><div class="metric-title">Fatturato RB</div><div class="metric-value small purple" id="tot-fatt-rb">€ 0,00</div></div>
+                </div>
+                <hr>
+                <div><div class="metric-title">Quota Indiv. WSQK (Diviso 3)</div><div class="metric-value small orange" id="tot-quota">€ 0,00</div></div>
+            </div>
+
+            <div class="card">
+                <h2>Dettaglio: WSQK</h2>
+                <div class="grid-2">
+                    <div><div class="metric-title">Ordini</div><div class="metric-value small" id="ws-ordini">0</div></div>
+                    <div><div class="metric-title">Netto WSQK</div><div class="metric-value small green" id="ws-netto">€ 0,00</div></div>
+                </div>
+                <div class="grid-2 no-margin">
+                    <div><div class="metric-title">Lordo</div><div class="metric-value small" style="font-size: 16px;" id="ws-lordo">€ 0,00</div></div>
+                    <div><div class="metric-title">Comm. RB</div><div class="metric-value small" style="font-size: 16px; color: #ff3b30;" id="ws-comm-rb">€ 0,00</div></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Dettaglio: Eddie</h2>
+                <div class="grid-2">
+                    <div><div class="metric-title">Ordini</div><div class="metric-value small" id="ed-ordini">0</div></div>
+                    <div><div class="metric-title">Netto Eddie</div><div class="metric-value small green" id="ed-netto">€ 0,00</div></div>
+                </div>
+                <div class="grid-2 no-margin">
+                    <div><div class="metric-title">Lordo</div><div class="metric-value small" style="font-size: 16px;" id="ed-lordo">€ 0,00</div></div>
+                    <div><div class="metric-title">Comm. RB</div><div class="metric-value small" style="font-size: 16px; color: #ff3b30;" id="ed-comm-rb">€ 0,00</div></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="metric-title">Top 5 Paesi</div>
+                <div class="chart-container"><canvas id="countryChart"></canvas></div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // ==========================================
+        // 1. INSERISCI QUI LE TUE CHIAVI SUPABASE
+        // ==========================================
+        const SUPABASE_URL = 'https://koeihdtefqnqlalcccbs.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_5YxgclO6KIM8qgGPRHNFrg_bJeTnxTO';
+        
+        let supabaseClient;
+        let myChart = null;
+        let allTransactions = [];
+
+        const formatEur = (num) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(num);
+
+        function showError(msg) {
+            const errBox = document.getElementById('error-box');
+            errBox.innerText = msg;
+            errBox.style.display = 'block';
+            console.error(msg);
+        }
+
+        // ==========================================
+        // 2. SISTEMA DI AVVIO PROTETTO (DOMContentLoaded)
+        // ==========================================
+        document.addEventListener("DOMContentLoaded", async () => {
+            try {
+                // Controllo se hai incollato le chiavi in modo errato
+                if (SUPABASE_URL.includes("INSERISCI_QUI")) {
+                    throw new Error("🚨 Errore: Devi inserire le tue chiavi Supabase nel codice alle righe 141-142!");
+                }
+
+                // Controllo se il browser ha bloccato la libreria Supabase
+                if (typeof window.supabase === 'undefined') {
+                    throw new Error("🚨 Errore: La libreria di Supabase non si è caricata. Controlla la connessione o disattiva l'AdBlocker.");
+                }
+
+                // Inizializza Supabase
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                
+                // Controllo Sessione Login
+                const { data, error } = await supabaseClient.auth.getSession();
+                
+                if (error) throw error;
+
+                // Se tutto è ok, nasconde la schermata di avvio
+                document.getElementById('startup-view').style.display = 'none';
+                
+                if (data && data.session) {
+                    showDashboard();
+                } else {
+                    document.getElementById('login-view').style.display = 'block';
+                }
+
+            } catch (err) {
+                // SE CRASHA QUALCOSA, RIMANE SULLA SCHERMATA DI AVVIO E STAMPA L'ERRORE
+                showError(err.message);
+            }
+        });
+
+        // ==========================================
+        // 3. FUNZIONI DI LOGIN
+        // ==========================================
+        async function handleLogin() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const errorMsg = document.getElementById('login-error');
+            errorMsg.style.display = 'none';
+
+            if(!email || !password) {
+                errorMsg.innerText = "Compila tutti i campi.";
+                errorMsg.style.display = 'block'; return;
+            }
+
+            const { data, error } = await supabaseClient.auth.signInWithPassword({ email: email, password: password });
+
+            if (error) {
+                errorMsg.innerText = "Credenziali errate o utente non trovato su Supabase.";
+                errorMsg.style.display = 'block';
+            } else {
+                document.getElementById('login-view').style.display = 'none';
+                showDashboard();
+            }
+        }
+
+        async function handleLogout() {
+            await supabaseClient.auth.signOut();
+            window.location.reload();
+        }
+
+        // ==========================================
+        // 4. MOTORE DATI (Uguale a prima)
+        // ==========================================
+        function showDashboard() {
+            document.getElementById('dashboard-view').style.display = 'block';
+            loadDatabaseData();
+        }
+
+        async function loadDatabaseData() {
+            const statusText = document.getElementById('db-status');
+            try {
+                statusText.innerText = "Scaricamento dati...";
+                const { data, error } = await supabaseClient.from('transactions').select('*');
+                if (error) throw new Error(error.message);
+
+                if (!data || data.length === 0) {
+                    statusText.innerText = "Database connesso, ma vuoto.";
+                    return;
+                }
+
+                const uniqueMonths = new Set();
+                allTransactions = data.map(row => {
+                    let d = new Date(row.purchased || row.created_at || "2024-01-01");
+                    let monthLabel = "Sconosciuto";
+                    if (!isNaN(d)) {
+                        let rawLabel = d.toLocaleString('it-IT', { month: 'long', year: 'numeric' });
+                        monthLabel = rawLabel.charAt(0).toUpperCase() + rawLabel.slice(1);
+                    }
+                    row.monthLabel = monthLabel;
+                    uniqueMonths.add(monthLabel);
+                    return row;
+                });
+
+                const selector = document.getElementById('monthSelector');
+                selector.innerHTML = '<option value="ALL">Tutti i mesi</option>';
+                
+                Array.from(uniqueMonths).sort().forEach(month => {
+                    if(month !== "Sconosciuto") {
+                        let option = document.createElement('option');
+                        option.value = month; option.innerText = month; selector.appendChild(option);
+                    }
+                });
+
+                statusText.innerText = `🟢 Aggiornato (${allTransactions.length} ordini)`;
+                statusText.style.color = 'var(--ios-green)';
+                updateDashboardView();
+            } catch (err) {
+                statusText.innerHTML = `🔴 Errore: ${err.message}`;
+                statusText.style.color = '#ff3b30';
+            }
+        }
+
+        function updateDashboardView() {
+            const selectedMonth = document.getElementById('monthSelector').value;
+            document.getElementById('card-title').innerText = selectedMonth === 'ALL' ? 'Riepilogo Globale' : `Riepilogo: ${selectedMonth}`;
+
+            let filteredData = selectedMonth === 'ALL' ? allTransactions : allTransactions.filter(row => row.monthLabel === selectedMonth);
+
+            let wsLordo = 0, wsOrdini = 0, edLordo = 0, edOrdini = 0;
+            const countryCounts = {};
+
+            filteredData.forEach(row => {
+                if (row.is_refunded === true || row.is_refunded === "True") return;
+                const costo = row.cost ? parseFloat(row.cost) : 0;
+
+                if (row.moc__set_num === 'MOC-247784') { wsOrdini++; wsLordo += costo; } 
+                else if (row.moc__set_num === 'MOC-250117') { edOrdini++; edLordo += costo; }
+
+                if (row.buyer_country) countryCounts[row.buyer_country] = (countryCounts[row.buyer_country] || 0) + 1;
+            });
+
+            let wsCommRB = wsLordo * 0.13; let wsCommPP = wsLordo * 0.08; let wsNetto = wsLordo - wsCommRB - wsCommPP;
+            let edCommRB = edLordo * 0.13; let edCommPP = edLordo * 0.08; let edNetto = edLordo - edCommRB - edCommPP;
+
+            let totLordo = wsLordo + edLordo; let totOrdini = wsOrdini + edOrdini;
+            let totNetto = wsNetto + edNetto; let totCommRB = wsCommRB + edCommRB;
+            let fattRB = totLordo - totCommRB; let quotaIndiv = wsNetto / 3;
+
+            document.getElementById('tot-netto').innerText = formatEur(totNetto);
+            document.getElementById('tot-ordini').innerText = totOrdini;
+            document.getElementById('tot-fatt-rb').innerText = formatEur(fattRB);
+            document.getElementById('tot-quota').innerText = formatEur(quotaIndiv);
+
+            document.getElementById('ws-ordini').innerText = wsOrdini; document.getElementById('ws-lordo').innerText = formatEur(wsLordo);
+            document.getElementById('ws-comm-rb').innerText = formatEur(wsCommRB);
+            document.getElementById('ws-netto').innerText = formatEur(wsNetto);
+
+            document.getElementById('ed-ordini').innerText = edOrdini; document.getElementById('ed-lordo').innerText = formatEur(edLordo);
+            document.getElementById('ed-comm-rb').innerText = formatEur(edCommRB);
+            document.getElementById('ed-netto').innerText = formatEur(edNetto);
+
+            const sortedCountries = Object.entries(countryCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+            const ctx = document.getElementById('countryChart').getContext('2d');
+            if (myChart) myChart.destroy();
+            myChart = new Chart(ctx, {
+                type: 'bar',
+                data: { labels: sortedCountries.map(i => i[0]), datasets: [{ label: 'Ordini', data: sortedCountries.map(i => i[1]), backgroundColor: '#007aff', borderRadius: 6 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { border: { display: false } } } }
+            });
+        }
+    </script>
+</body>
+</html>
