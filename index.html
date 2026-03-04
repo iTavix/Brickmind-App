@@ -3,54 +3,90 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BrickMind Dashboard</title>
+    <title>BrickMind Dashboard RB</title>
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
 
     <style>
-        /* --- STILE iOS MINIMALISTA --- */
+        /* --- STILE iOS (VARIABILI TEMA CHIARO) --- */
         :root {
-            --bg-color: #f2f2f7; --card-bg: #ffffff; --text-main: #000000;
-            --text-sec: #8e8e93; --ios-blue: #007aff; --ios-green: #34c759;
-            --ios-purple: #af52de; --ios-orange: #ff9500;
+            --bg-color: #f2f2f7; 
+            --card-bg: #ffffff; 
+            --text-main: #000000;
+            --text-sec: #8e8e93; 
+            --ios-blue: #007aff; 
+            --ios-green: #34c759;
+            --ios-purple: #af52de; 
+            --ios-orange: #ff9500;
+            --border-color: #c7c7cc;
+            --select-bg: #e5e5ea;
+        }
+
+        /* --- STILE iOS (VARIABILI TEMA SCURO) --- */
+        body.dark-mode {
+            --bg-color: #000000;
+            --card-bg: #1c1c1e;
+            --text-main: #ffffff;
+            --text-sec: #ebebf599;
+            --ios-blue: #0a84ff;
+            --ios-green: #30d158;
+            --ios-purple: #bf5af2;
+            --ios-orange: #ff9f0a;
+            --border-color: #38383a;
+            --select-bg: #2c2c2e;
         }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 20px 16px;
-            display: flex; justify-content: center;
+            display: flex; justify-content: center; transition: background-color 0.3s, color 0.3s;
         }
 
         .app-container { max-width: 450px; width: 100%; padding-bottom: 40px; }
         
-        /* ELEMENTI COMUNI */
-        .card { background-color: var(--card-bg); border-radius: 18px; padding: 20px; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); }
+        .card { background-color: var(--card-bg); border-radius: 18px; padding: 20px; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); transition: background-color 0.3s; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
         .grid-2.no-margin { margin-bottom: 0; }
-        hr { border: none; border-top: 1px solid #e5e5ea; margin: 16px 0; }
+        hr { border: none; border-top: 1px solid var(--border-color); margin: 16px 0; transition: border-color 0.3s; }
         
-        /* TESTI */
         h1 { font-size: 28px; font-weight: 700; margin: 0; }
         h2 { font-size: 20px; font-weight: 600; margin: 0 0 16px 0; }
         .metric-title { color: var(--text-sec); font-size: 12px; font-weight: 600; text-transform: uppercase; margin-bottom: 4px; }
-        .metric-value { font-size: 28px; font-weight: 700; }
+        .metric-value { font-size: 28px; font-weight: 700; letter-spacing: -0.5px;}
         .metric-value.small { font-size: 20px; }
         .green { color: var(--ios-green); } .purple { color: var(--ios-purple); } .orange { color: var(--ios-orange); }
         
-        /* VISTE (Gestite dinamicamente dal JS) */
         #startup-view { text-align: center; margin-top: 60px; }
-        #login-view { display: none; text-align: center; padding-top: 40px; }
+        #login-view { display: none; text-align: center; padding-top: 20px; }
         #dashboard-view { display: none; }
         
-        /* INPUT LOGIN */
-        .input-field { width: 100%; box-sizing: border-box; padding: 14px 16px; margin-bottom: 16px; border-radius: 12px; border: 1px solid #c7c7cc; font-size: 16px; outline: none; }
+        .input-field { width: 100%; box-sizing: border-box; padding: 14px 16px; margin-bottom: 16px; border-radius: 12px; border: 1px solid var(--border-color); font-size: 16px; outline: none; background-color: var(--card-bg); color: var(--text-main); transition: background-color 0.3s, color 0.3s, border-color 0.3s; }
         .btn-primary { width: 100%; background-color: var(--ios-blue); color: white; padding: 16px; border-radius: 14px; font-size: 17px; font-weight: 600; border: none; cursor: pointer; }
         .btn-logout { background: none; color: #ff3b30; border: none; font-size: 15px; font-weight: 500; cursor: pointer; padding: 0;}
-        select { background-color: #e5e5ea; border: none; border-radius: 10px; padding: 8px 12px; font-size: 15px; font-weight: 600; color: var(--ios-blue); outline: none; }
+        select { background-color: var(--select-bg); border: none; border-radius: 10px; padding: 6px 10px; font-size: 14px; font-weight: 600; color: var(--ios-blue); outline: none; margin-left: 10px; transition: background-color 0.3s; cursor: pointer;}
         
         #error-box { background-color: #ffe5e5; color: #ff3b30; padding: 15px; border-radius: 10px; margin-top: 20px; font-weight: 600; display: none; }
         .chart-container { position: relative; height: 220px; width: 100%; margin-top: 10px;}
+        
+        /* Strumenti Intestazione (Upload e Tema) */
+        .header-tools { display: flex; align-items: center; justify-content: flex-end;}
+        
+        .upload-minimal { display: flex; align-items: center; gap: 4px; color: var(--ios-blue); font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; background: none; border: none; padding: 0;}
+        .upload-minimal:active { opacity: 0.5; }
+        .upload-minimal svg { width: 18px; height: 18px; }
+        input[type="file"] { display: none; }
+        
+        .theme-btn { background: none; border: none; cursor: pointer; padding: 0 10px; margin-right: 5px; color: var(--text-main); display: flex; align-items: center; }
+        .theme-btn svg { width: 22px; height: 22px; }
+        
+        .logo-img { height: 60px; margin-bottom: 20px; object-fit: contain; }
+        .dash-logo { height: 32px; margin-right: 10px; object-fit: contain; }
+        
+        /* Loading Spinner */
+        .spinner { border: 3px solid var(--border-color); border-top: 3px solid var(--ios-blue); border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; margin: 0 auto 15px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
@@ -58,47 +94,85 @@
     <div class="app-container">
         
         <div id="startup-view">
-            <h2>⚙️ Avvio App in corso...</h2>
-            <p style="color: var(--text-sec); font-size: 14px;">Inizializzazione dei moduli di sicurezza.</p>
+            <div class="spinner"></div>
+            <h2 style="font-size: 18px;">Avvio App in corso</h2>
+            <p style="color: var(--text-sec); font-size: 14px;">Inizializzazione moduli di sicurezza</p>
             <div id="error-box">Nessun errore.</div>
         </div>
 
         <div id="login-view">
-            <h1 style="font-size: 32px; margin-bottom: 8px;">BrickMind</h1>
-            <p style="color: var(--text-sec); margin-bottom: 30px;">Inserisci le tue credenziali Supabase</p>
-
+            <img id="login-logo" alt="BrickMind Logo" class="logo-img">
+            <p style="color: var(--text-sec); margin-bottom: 30px;">Inserisci le credenziali Supabase</p>
             <div id="login-error" style="color:#ff3b30; margin-bottom:15px; display:none; font-weight:bold;">Errore.</div>
-
             <input type="email" id="email" class="input-field" placeholder="Email" autocomplete="email">
             <input type="password" id="password" class="input-field" placeholder="Password">
-            
             <button class="btn-primary" onclick="handleLogin()">Accedi</button>
         </div>
 
         <div id="dashboard-view">
+            
             <div style="display: flex; justify-content: space-between; align-items: center; margin: 10px 0 20px 0;">
-                <h1>Dashboard</h1>
-                <select id="monthSelector" onchange="updateDashboardView()">
-                    <option value="ALL">Caricamento...</option>
-                </select>
+                
+                <div style="display: flex; align-items: center;">
+                    <img id="dash-logo" alt="Logo" class="dash-logo">
+                    <h1 style="font-size: 24px;">Dashboard RB</h1>
+                </div>
+                
+                <div class="header-tools">
+                    <button id="theme-toggle" class="theme-btn" onclick="toggleTheme()"></button>
+                    
+                    <label for="csv-file" class="upload-minimal" id="upload-label">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        <span>Carica CSV</span>
+                    </label>
+                    <input type="file" id="csv-file" accept=".csv" onchange="uploadToSupabase(event)">
+                    
+                    <select id="monthSelector" onchange="updateDashboardView()">
+                        <option value="ALL">Caricamento...</option>
+                    </select>
+                </div>
             </div>
 
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <div id="db-status" style="font-size: 13px; font-weight: 500;">Inizializzazione...</div>
+                <div id="db-status" style="font-size: 13px; font-weight: 500; color: var(--text-sec);">Inizializzazione...</div>
                 <button class="btn-logout" onclick="handleLogout()">Esci</button>
             </div>
 
             <div class="card">
                 <h2 id="card-title">Riepilogo Globale</h2>
-                <div class="metric-title">Ricavo Netto (Tutti)</div>
+                
+                <div class="metric-title">Totale Netto</div>
                 <div class="metric-value green" style="margin-bottom: 16px;" id="tot-netto">€ 0,00</div>
-
+                
                 <div class="grid-2">
-                    <div><div class="metric-title">Ordini</div><div class="metric-value small" id="tot-ordini">0</div></div>
+                    <div><div class="metric-title">Tot. Lordo (Fatturato)</div><div class="metric-value small" id="tot-lordo">€ 0,00</div></div>
                     <div><div class="metric-title">Fatturato RB</div><div class="metric-value small purple" id="tot-fatt-rb">€ 0,00</div></div>
                 </div>
+                <div class="grid-2">
+                    <div><div class="metric-title">Comm. RB Totali</div><div class="metric-value small" style="color: #ff3b30;" id="tot-comm-rb">€ 0,00</div></div>
+                    <div><div class="metric-title">Comm. PayPal Totali</div><div class="metric-value small" style="color: #ff3b30;" id="tot-comm-pp">€ 0,00</div></div>
+                </div>
+                <div><div class="metric-title">Tot. Ordini</div><div class="metric-value small" id="tot-ordini">0</div></div>
+
                 <hr>
-                <div><div class="metric-title">Quota Indiv. WSQK (Diviso 3)</div><div class="metric-value small orange" id="tot-quota">€ 0,00</div></div>
+                
+                <h3 style="font-size: 15px; margin: 0 0 10px 0;">Progetto WSQK</h3>
+                <div class="grid-2">
+                    <div><div class="metric-title">Netto WSQK</div><div class="metric-value small" id="glob-ws-netto">€ 0,00</div></div>
+                    <div><div class="metric-title">Quota (Diviso 3)</div><div class="metric-value small orange" id="tot-quota">€ 0,00</div></div>
+                </div>
+
+                <hr>
+
+                <h3 style="font-size: 15px; margin: 0 0 10px 0;">Progetto Eddie</h3>
+                <div class="grid-2 no-margin">
+                    <div><div class="metric-title">Netto Eddie</div><div class="metric-value small" id="glob-ed-netto">€ 0,00</div></div>
+                    <div><div class="metric-title">Quota (Diviso 3)</div><div class="metric-value small orange" id="ed-quota">€ 0,00</div></div>
+                </div>
             </div>
 
             <div class="card">
@@ -146,74 +220,87 @@
 
         const formatEur = (num) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(num);
 
+        const iconMoon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`;
+        const iconSun = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`;
+        const iconUpload = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>`;
+
         function showError(msg) {
             const errBox = document.getElementById('error-box');
-            errBox.innerText = msg;
+            errBox.innerHTML = `🔴 Errore: <b>${msg}</b>`;
             errBox.style.display = 'block';
             console.error(msg);
         }
 
         // ==========================================
-        // 2. SISTEMA DI AVVIO PROTETTO (DOMContentLoaded)
+        // TEMA E LOGHI INVERTITI COME RICHIESTO
+        // ==========================================
+        function applyTheme(isDark) {
+            const themeBtn = document.getElementById('theme-toggle');
+            const loginLogo = document.getElementById('login-logo');
+            const dashLogo = document.getElementById('dash-logo');
+
+            if (isDark) {
+                document.body.classList.add('dark-mode');
+                if (themeBtn) themeBtn.innerHTML = iconSun; 
+                // Modalità Notte (Sfondo Nero) -> Carica il file NERO_brickmind
+                if (loginLogo) loginLogo.src = 'Vettoriale 2026 NERO_brickmind.png';
+                if (dashLogo) dashLogo.src = 'Vettoriale 2026 NERO_brickmind.png';
+            } else {
+                document.body.classList.remove('dark-mode');
+                if (themeBtn) themeBtn.innerHTML = iconMoon; 
+                // Modalità Giorno (Sfondo Bianco) -> Carica il file BIANCO_brickmind
+                if (loginLogo) loginLogo.src = 'Vettoriale 2026 BIANCO_brickmind.png';
+                if (dashLogo) dashLogo.src = 'Vettoriale 2026 BIANCO_brickmind.png';
+            }
+            if (allTransactions.length > 0) updateDashboardView();
+        }
+
+        function toggleTheme() {
+            const isDark = !document.body.classList.contains('dark-mode');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            applyTheme(isDark);
+        }
+
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const isDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
+            applyTheme(isDark);
+        }
+
+        // ==========================================
+        // AVVIO PROTETTO
         // ==========================================
         document.addEventListener("DOMContentLoaded", async () => {
+            initTheme(); 
+
             try {
-                // Controllo se hai incollato le chiavi in modo errato
-                if (SUPABASE_URL.includes("INSERISCI_QUI")) {
-                    throw new Error("🚨 Errore: Devi inserire le tue chiavi Supabase nel codice alle righe 141-142!");
-                }
+                if (SUPABASE_URL.includes("INSERISCI_QUI")) throw new Error("Inserisci le tue chiavi Supabase nel codice HTML.");
+                if (typeof window.supabase === 'undefined') throw new Error("Libreria Supabase bloccata (AdBlocker o Rete).");
 
-                // Controllo se il browser ha bloccato la libreria Supabase
-                if (typeof window.supabase === 'undefined') {
-                    throw new Error("🚨 Errore: La libreria di Supabase non si è caricata. Controlla la connessione o disattiva l'AdBlocker.");
-                }
-
-                // Inizializza Supabase
                 supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-                
-                // Controllo Sessione Login
                 const { data, error } = await supabaseClient.auth.getSession();
-                
                 if (error) throw error;
 
-                // Se tutto è ok, nasconde la schermata di avvio
                 document.getElementById('startup-view').style.display = 'none';
                 
-                if (data && data.session) {
-                    showDashboard();
-                } else {
-                    document.getElementById('login-view').style.display = 'block';
-                }
+                if (data && data.session) showDashboard();
+                else document.getElementById('login-view').style.display = 'block';
 
-            } catch (err) {
-                // SE CRASHA QUALCOSA, RIMANE SULLA SCHERMATA DI AVVIO E STAMPA L'ERRORE
-                showError(err.message);
-            }
+            } catch (err) { showError(err.message); }
         });
 
-        // ==========================================
-        // 3. FUNZIONI DI LOGIN
-        // ==========================================
         async function handleLogin() {
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             const errorMsg = document.getElementById('login-error');
             errorMsg.style.display = 'none';
 
-            if(!email || !password) {
-                errorMsg.innerText = "Compila tutti i campi.";
-                errorMsg.style.display = 'block'; return;
-            }
+            if(!email || !password) { errorMsg.innerText = "Compila tutti i campi."; errorMsg.style.display = 'block'; return; }
 
             const { data, error } = await supabaseClient.auth.signInWithPassword({ email: email, password: password });
-
-            if (error) {
-                errorMsg.innerText = "Credenziali errate o utente non trovato su Supabase.";
-                errorMsg.style.display = 'block';
-            } else {
-                document.getElementById('login-view').style.display = 'none';
-                showDashboard();
-            }
+            if (error) { errorMsg.innerText = "Credenziali errate."; errorMsg.style.display = 'block'; } 
+            else { document.getElementById('login-view').style.display = 'none'; showDashboard(); }
         }
 
         async function handleLogout() {
@@ -222,22 +309,59 @@
         }
 
         // ==========================================
-        // 4. MOTORE DATI (Uguale a prima)
+        // LOGICA DATI E UPLOAD CSV
         // ==========================================
         function showDashboard() {
             document.getElementById('dashboard-view').style.display = 'block';
             loadDatabaseData();
         }
 
+        function uploadToSupabase(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const btnLabel = document.getElementById('upload-label');
+            btnLabel.innerHTML = `<span style="color:var(--ios-orange);">Caricamento...</span>`;
+
+            Papa.parse(file, {
+                header: true,
+                skipEmptyLines: true,
+                complete: async function(results) {
+                    const cleanRows = results.data.filter(r => r.order_number);
+
+                    try {
+                        const { data, error } = await supabaseClient
+                            .from('transactions')
+                            .upsert(cleanRows, { onConflict: 'order_number' });
+
+                        if (error) throw error;
+
+                        btnLabel.innerHTML = `<span style="color:var(--ios-green);">Aggiornato</span>`;
+                        loadDatabaseData();
+
+                    } catch (err) {
+                        console.error(err);
+                        btnLabel.innerHTML = `<span style="color:#ff3b30;">Errore DB</span>`;
+                    }
+
+                    setTimeout(() => {
+                        btnLabel.innerHTML = iconUpload + ` <span>Carica CSV</span>`;
+                        btnLabel.style.color = "var(--ios-blue)";
+                    }, 3000);
+                }
+            });
+        }
+
         async function loadDatabaseData() {
             const statusText = document.getElementById('db-status');
             try {
-                statusText.innerText = "Scaricamento dati...";
+                statusText.innerText = "Sincronizzazione in corso...";
                 const { data, error } = await supabaseClient.from('transactions').select('*');
+                
                 if (error) throw new Error(error.message);
 
                 if (!data || data.length === 0) {
-                    statusText.innerText = "Database connesso, ma vuoto.";
+                    statusText.innerText = "Database vuoto. Carica un CSV.";
                     return;
                 }
 
@@ -264,12 +388,12 @@
                     }
                 });
 
-                statusText.innerText = `🟢 Aggiornato (${allTransactions.length} ordini)`;
-                statusText.style.color = 'var(--ios-green)';
+                statusText.innerText = `Aggiornato: ${allTransactions.length} ordini caricati`;
                 updateDashboardView();
             } catch (err) {
-                statusText.innerHTML = `🔴 Errore: ${err.message}`;
+                statusText.innerHTML = `🔴 Errore DB: <b>${err.message}</b>`;
                 statusText.style.color = '#ff3b30';
+                console.error(err);
             }
         }
 
@@ -292,33 +416,68 @@
                 if (row.buyer_country) countryCounts[row.buyer_country] = (countryCounts[row.buyer_country] || 0) + 1;
             });
 
+            // Calcoli base
             let wsCommRB = wsLordo * 0.13; let wsCommPP = wsLordo * 0.08; let wsNetto = wsLordo - wsCommRB - wsCommPP;
             let edCommRB = edLordo * 0.13; let edCommPP = edLordo * 0.08; let edNetto = edLordo - edCommRB - edCommPP;
 
-            let totLordo = wsLordo + edLordo; let totOrdini = wsOrdini + edOrdini;
-            let totNetto = wsNetto + edNetto; let totCommRB = wsCommRB + edCommRB;
-            let fattRB = totLordo - totCommRB; let quotaIndiv = wsNetto / 3;
+            // Calcoli globali
+            let totLordo = wsLordo + edLordo;
+            let totOrdini = wsOrdini + edOrdini;
+            let totNetto = wsNetto + edNetto; 
+            let totCommRB = wsCommRB + edCommRB;
+            let totCommPP = wsCommPP + edCommPP;
+            let fattRB = totLordo - totCommRB;
 
+            // Quote Individuali
+            let wsQuotaIndiv = wsNetto / 3;
+            let edQuotaIndiv = edNetto / 3;
+
+            // Assegnazione Riepilogo Globale
             document.getElementById('tot-netto').innerText = formatEur(totNetto);
-            document.getElementById('tot-ordini').innerText = totOrdini;
+            document.getElementById('tot-lordo').innerText = formatEur(totLordo);
             document.getElementById('tot-fatt-rb').innerText = formatEur(fattRB);
-            document.getElementById('tot-quota').innerText = formatEur(quotaIndiv);
+            document.getElementById('tot-ordini').innerText = totOrdini;
+            document.getElementById('tot-comm-rb').innerText = formatEur(totCommRB);
+            document.getElementById('tot-comm-pp').innerText = formatEur(totCommPP);
+            
+            document.getElementById('glob-ws-netto').innerText = formatEur(wsNetto);
+            document.getElementById('tot-quota').innerText = formatEur(wsQuotaIndiv);
 
-            document.getElementById('ws-ordini').innerText = wsOrdini; document.getElementById('ws-lordo').innerText = formatEur(wsLordo);
+            document.getElementById('glob-ed-netto').innerText = formatEur(edNetto);
+            document.getElementById('ed-quota').innerText = formatEur(edQuotaIndiv);
+
+            // Assegnazione Dettagli WSQK
+            document.getElementById('ws-ordini').innerText = wsOrdini; 
+            document.getElementById('ws-lordo').innerText = formatEur(wsLordo);
             document.getElementById('ws-comm-rb').innerText = formatEur(wsCommRB);
             document.getElementById('ws-netto').innerText = formatEur(wsNetto);
 
-            document.getElementById('ed-ordini').innerText = edOrdini; document.getElementById('ed-lordo').innerText = formatEur(edLordo);
+            // Assegnazione Dettagli Eddie
+            document.getElementById('ed-ordini').innerText = edOrdini; 
+            document.getElementById('ed-lordo').innerText = formatEur(edLordo);
             document.getElementById('ed-comm-rb').innerText = formatEur(edCommRB);
             document.getElementById('ed-netto').innerText = formatEur(edNetto);
 
+            // Grafico
             const sortedCountries = Object.entries(countryCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
             const ctx = document.getElementById('countryChart').getContext('2d');
+            
+            const isDarkMode = document.body.classList.contains('dark-mode');
+            const gridColor = isDarkMode ? '#38383a' : '#e5e5ea';
+            const tickColor = isDarkMode ? '#ebebf599' : '#8e8e93';
+
             if (myChart) myChart.destroy();
             myChart = new Chart(ctx, {
                 type: 'bar',
                 data: { labels: sortedCountries.map(i => i[0]), datasets: [{ label: 'Ordini', data: sortedCountries.map(i => i[1]), backgroundColor: '#007aff', borderRadius: 6 }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { border: { display: false } } } }
+                options: { 
+                    responsive: true, maintainAspectRatio: false, 
+                    plugins: { legend: { display: false } }, 
+                    scales: { 
+                        x: { grid: { display: false }, ticks: { color: tickColor } }, 
+                        y: { border: { display: false }, grid: { color: gridColor }, ticks: { color: tickColor } } 
+                    } 
+                }
             });
         }
     </script>
