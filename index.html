@@ -10,7 +10,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
 
     <style>
-        /* --- STILE iOS (VARIABILI TEMA CHIARO) --- */
+        /* --- TEMA E VARIABILI --- */
         :root {
             --bg-color: #f2f2f7; 
             --card-bg: #ffffff; 
@@ -24,7 +24,6 @@
             --select-bg: #e5e5ea;
         }
 
-        /* --- STILE iOS (VARIABILI TEMA SCURO) --- */
         body.dark-mode {
             --bg-color: #000000;
             --card-bg: #1c1c1e;
@@ -38,184 +37,324 @@
             --select-bg: #2c2c2e;
         }
 
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 20px 16px;
-            display: flex; justify-content: center; transition: background-color 0.3s, color 0.3s;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px 16px;
+            display: flex;
+            justify-content: center;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
-        .app-container { max-width: 450px; width: 100%; padding-bottom: 40px; }
-        
-        .card { background-color: var(--card-bg); border-radius: 18px; padding: 20px; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); transition: background-color 0.3s; }
+        .app-container {
+            width: 100%;
+            max-width: 480px; 
+            padding-bottom: 60px;
+        }
+
+        /* --- CARDS E LAYOUT --- */
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            transition: background-color 0.3s ease;
+        }
+
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
         .grid-2.no-margin { margin-bottom: 0; }
-        hr { border: none; border-top: 1px solid var(--border-color); margin: 16px 0; transition: border-color 0.3s; }
+        hr { border: none; border-top: 1px solid var(--border-color); margin: 20px 0; transition: border-color 0.3s; }
+
+        /* --- TESTI --- */
+        h1 { font-size: 22px; font-weight: 700; margin: 0; letter-spacing: -0.5px; white-space: nowrap;}
+        h2 { font-size: 18px; font-weight: 600; margin: 0 0 16px 0; }
+        h3 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 12px 0; color: var(--text-sec); }
         
-        h1 { font-size: 28px; font-weight: 700; margin: 0; }
-        h2 { font-size: 20px; font-weight: 600; margin: 0 0 16px 0; }
-        .metric-title { color: var(--text-sec); font-size: 12px; font-weight: 600; text-transform: uppercase; margin-bottom: 4px; }
-        .metric-value { font-size: 28px; font-weight: 700; letter-spacing: -0.5px;}
+        .metric-title { color: var(--text-sec); font-size: 11px; font-weight: 600; text-transform: uppercase; margin-bottom: 4px; }
+        .metric-value { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
         .metric-value.small { font-size: 20px; }
-        .green { color: var(--ios-green); } .purple { color: var(--ios-purple); } .orange { color: var(--ios-orange); }
         
-        #startup-view { text-align: center; margin-top: 60px; }
-        #login-view { display: none; text-align: center; padding-top: 20px; }
-        #dashboard-view { display: none; }
-        
-        .input-field { width: 100%; box-sizing: border-box; padding: 14px 16px; margin-bottom: 16px; border-radius: 12px; border: 1px solid var(--border-color); font-size: 16px; outline: none; background-color: var(--card-bg); color: var(--text-main); transition: background-color 0.3s, color 0.3s, border-color 0.3s; }
-        .btn-primary { width: 100%; background-color: var(--ios-blue); color: white; padding: 16px; border-radius: 14px; font-size: 17px; font-weight: 600; border: none; cursor: pointer; }
-        .btn-logout { background: none; color: #ff3b30; border: none; font-size: 15px; font-weight: 500; cursor: pointer; padding: 0;}
-        select { background-color: var(--select-bg); border: none; border-radius: 10px; padding: 6px 10px; font-size: 14px; font-weight: 600; color: var(--ios-blue); outline: none; margin-left: 10px; transition: background-color 0.3s; cursor: pointer;}
-        
-        #error-box { background-color: #ffe5e5; color: #ff3b30; padding: 15px; border-radius: 10px; margin-top: 20px; font-weight: 600; display: none; }
-        .chart-container { position: relative; height: 220px; width: 100%; margin-top: 10px;}
-        
-        /* Strumenti Intestazione (Upload e Tema) */
-        .header-tools { display: flex; align-items: center; justify-content: flex-end;}
-        
-        .upload-minimal { display: flex; align-items: center; gap: 4px; color: var(--ios-blue); font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; background: none; border: none; padding: 0;}
-        .upload-minimal:active { opacity: 0.5; }
-        .upload-minimal svg { width: 18px; height: 18px; }
-        input[type="file"] { display: none; }
-        
-        .theme-btn { background: none; border: none; cursor: pointer; padding: 0 10px; margin-right: 5px; color: var(--text-main); display: flex; align-items: center; }
-        .theme-btn svg { width: 22px; height: 22px; }
-        
-        .logo-img { height: 60px; margin-bottom: 20px; object-fit: contain; }
-        .dash-logo { height: 32px; margin-right: 10px; object-fit: contain; }
-        
-        /* Loading Spinner */
-        .spinner { border: 3px solid var(--border-color); border-top: 3px solid var(--ios-blue); border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; margin: 0 auto 15px auto; }
+        .green { color: var(--ios-green); } 
+        .purple { color: var(--ios-purple); } 
+        .orange { color: var(--ios-orange); }
+
+        /* --- HEADER E TASTI --- */
+        .header-box { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .header-left { display: flex; align-items: center; gap: 8px; }
+        .header-tools { display: flex; align-items: center; gap: 6px; }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            color: var(--ios-blue);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+        }
+        .icon-btn:active { background-color: var(--select-bg); }
+        .icon-btn svg { width: 22px; height: 22px; }
+        .icon-btn.logout { color: #ff3b30; }
+
+        /* NASCONDI INPUT FILE (Rimuove "Scegli file" in modo definitivo) */
+        input[type="file"] {
+            opacity: 0;
+            position: absolute;
+            z-index: -1;
+            width: 0;
+            height: 0;
+            display: none;
+        }
+
+        .db-status-container { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 20px; 
+            background-color: var(--card-bg);
+            padding: 12px 16px;
+            border-radius: 14px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+            transition: background-color 0.3s ease;
+        }
+        #db-status { font-size: 13px; font-weight: 500; color: var(--text-sec); }
+
+        select {
+            background-color: var(--select-bg);
+            border: none;
+            border-radius: 10px;
+            padding: 8px 12px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--ios-blue);
+            outline: none;
+            cursor: pointer;
+            appearance: none;
+            max-width: 120px;
+        }
+
+        /* --- VISTE APP --- */
+        #startup-view { text-align: center; margin-top: 100px; }
+        #login-view { display: none; text-align: center; padding-top: 40px; }
+        #dashboard-view { display: none; width: 100%; }
+
+        .input-field {
+            width: 100%;
+            padding: 16px;
+            margin-bottom: 12px;
+            border-radius: 14px;
+            border: 1px solid var(--border-color);
+            background-color: var(--card-bg);
+            color: var(--text-main);
+            font-size: 16px;
+            outline: none;
+            transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+        }
+
+        .btn-primary {
+            width: 100%;
+            background-color: var(--ios-blue);
+            color: white;
+            padding: 16px;
+            border-radius: 14px;
+            font-size: 17px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+
+        #error-box { background-color: #ffe5e5; color: #ff3b30; padding: 16px; border-radius: 12px; margin-top: 20px; font-weight: 600; display: none; }
+
+        .chart-container { position: relative; height: 220px; width: 100%; margin-top: 8px; }
+
+        .logo-img { height: 60px; margin-bottom: 30px; object-fit: contain; }
+        .dash-logo { height: 28px; object-fit: contain; }
+
+        .spinner { 
+            border: 3px solid var(--border-color); 
+            border-top: 3px solid var(--ios-blue); 
+            border-radius: 50%; 
+            width: 24px; 
+            height: 24px; 
+            animation: spin 1s linear infinite; 
+            margin: 0 auto 12px auto; 
+        }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* --- OTTIMIZZAZIONE MOBILE --- */
+        @media (max-width: 400px) {
+            h1 { font-size: 18px; }
+            .dash-logo { height: 24px; }
+            .metric-value { font-size: 24px; }
+            .metric-value.small { font-size: 18px; }
+            .app-container { padding: 10px; }
+            .card { padding: 18px; }
+            .icon-btn { padding: 6px; }
+            .icon-btn svg { width: 20px; height: 20px; }
+            select { font-size: 13px; padding: 6px 10px; }
+        }
     </style>
 </head>
 <body>
 
     <div class="app-container">
         
+        <!-- AVVIO -->
         <div id="startup-view">
             <div class="spinner"></div>
-            <h2 style="font-size: 18px;">Avvio App in corso</h2>
-            <p style="color: var(--text-sec); font-size: 14px;">Inizializzazione moduli di sicurezza</p>
-            <div id="error-box">Nessun errore.</div>
+            <h2 style="font-size: 16px;">Sincronizzazione BrickMind</h2>
+            <div id="error-box"></div>
         </div>
 
+        <!-- LOGIN -->
         <div id="login-view">
-            <img id="login-logo" alt="BrickMind Logo" class="logo-img">
-            <p style="color: var(--text-sec); margin-bottom: 30px;">Inserisci le credenziali BrickMind</p>
-            <div id="login-error" style="color:#ff3b30; margin-bottom:15px; display:none; font-weight:bold;">Errore.</div>
+            <img id="login-logo" alt="" class="logo-img">
+            <p style="color: var(--text-sec); margin-bottom: 24px; font-size: 14px;">Accesso Riservato</p>
+            <div id="login-error" style="color:#ff3b30; margin-bottom:12px; display:none; font-weight:bold; font-size: 13px;">Credenziali non valide.</div>
             <input type="email" id="email" class="input-field" placeholder="Email" autocomplete="email">
             <input type="password" id="password" class="input-field" placeholder="Password">
             <button class="btn-primary" onclick="handleLogin()">Accedi</button>
         </div>
 
+        <!-- DASHBOARD -->
         <div id="dashboard-view">
             
-            <div style="display: flex; justify-content: space-between; align-items: center; margin: 10px 0 20px 0;">
-                
-                <div style="display: flex; align-items: center;">
-                    <img id="dash-logo" alt="Logo" class="dash-logo">
-                    <h1 style="font-size: 24px;">Dashboard RB</h1>
+            <!-- HEADER (Logo, Titolo, Tasti Icona) -->
+            <div class="header-box">
+                <div class="header-left">
+                    <img id="dash-logo" alt="" class="dash-logo">
+                    <h1>Dashboard RB</h1>
                 </div>
                 
                 <div class="header-tools">
-                    <button id="theme-toggle" class="theme-btn" onclick="toggleTheme()"></button>
+                    <button id="theme-toggle" class="icon-btn" onclick="toggleTheme()"></button>
                     
-                    <label for="csv-file" class="upload-minimal" id="upload-label">
+                    <label for="csv-file" class="icon-btn" id="upload-label">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                             <polyline points="17 8 12 3 7 8"></polyline>
                             <line x1="12" y1="3" x2="12" y2="15"></line>
                         </svg>
-                        <span>Carica CSV</span>
                     </label>
+                    <!-- Input file nascosto via CSS (opacity 0, absolute) -->
                     <input type="file" id="csv-file" accept=".csv" onchange="uploadToSupabase(event)">
                     
-                    <select id="monthSelector" onchange="updateDashboardView()">
-                        <option value="ALL">Caricamento...</option>
-                    </select>
+                    <button class="icon-btn logout" onclick="handleLogout()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                            <polyline points="16 17 21 12 16 7"></polyline>
+                            <line x1="21" y1="12" x2="9" y2="12"></line>
+                        </svg>
+                    </button>
                 </div>
             </div>
 
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <div id="db-status" style="font-size: 13px; font-weight: 500; color: var(--text-sec);">Inizializzazione...</div>
-                <button class="btn-logout" onclick="handleLogout()">Esci</button>
+            <!-- CONTENITORE STATO E FILTRO -->
+            <div class="db-status-container">
+                <div id="db-status">Caricamento dati...</div>
+                <select id="monthSelector" onchange="updateDashboardView()">
+                    <option value="ALL">Storico</option>
+                </select>
             </div>
 
+            <!-- SEZIONE: GLOBALE -->
             <div class="card">
                 <h2 id="card-title">Riepilogo Globale</h2>
-                
                 <div class="metric-title">Totale Netto</div>
-                <div class="metric-value green" style="margin-bottom: 16px;" id="tot-netto">€ 0,00</div>
+                <div class="metric-value green" style="margin-bottom: 20px;" id="tot-netto">€ 0,00</div>
                 
                 <div class="grid-2">
-                    <div><div class="metric-title">Tot. Lordo (Fatturato)</div><div class="metric-value small" id="tot-lordo">€ 0,00</div></div>
+                    <div><div class="metric-title">Tot. Lordo</div><div class="metric-value small" id="tot-lordo">€ 0,00</div></div>
                     <div><div class="metric-title">Fatturato RB</div><div class="metric-value small purple" id="tot-fatt-rb">€ 0,00</div></div>
                 </div>
                 <div class="grid-2">
                     <div><div class="metric-title">Comm. RB Totali</div><div class="metric-value small" style="color: #ff3b30;" id="tot-comm-rb">€ 0,00</div></div>
-                    <div><div class="metric-title">Comm. PayPal Totali</div><div class="metric-value small" style="color: #ff3b30;" id="tot-comm-pp">€ 0,00</div></div>
+                    <div><div class="metric-title">Comm. PayPal</div><div class="metric-value small" style="color: #ff3b30;" id="tot-comm-pp">€ 0,00</div></div>
                 </div>
-                <div><div class="metric-title">Tot. Ordini</div><div class="metric-value small" id="tot-ordini">0</div></div>
+                <div><div class="metric-title">Volume Vendite</div><div class="metric-value small" id="tot-ordini">0</div></div>
 
                 <hr>
                 
-                <h3 style="font-size: 15px; margin: 0 0 10px 0;">Progetto WSQK</h3>
+                <h3>Progetto WSQK</h3>
                 <div class="grid-2">
                     <div><div class="metric-title">Netto WSQK</div><div class="metric-value small" id="glob-ws-netto">€ 0,00</div></div>
-                    <div><div class="metric-title">Quota (Diviso 3)</div><div class="metric-value small orange" id="tot-quota">€ 0,00</div></div>
+                    <div><div class="metric-title">Quota (1/3)</div><div class="metric-value small orange" id="tot-quota">€ 0,00</div></div>
                 </div>
 
                 <hr>
 
-                <h3 style="font-size: 15px; margin: 0 0 10px 0;">Progetto Eddie</h3>
+                <h3>Progetto Eddie</h3>
                 <div class="grid-2 no-margin">
                     <div><div class="metric-title">Netto Eddie</div><div class="metric-value small" id="glob-ed-netto">€ 0,00</div></div>
-                    <div><div class="metric-title">Quota (Diviso 3)</div><div class="metric-value small orange" id="ed-quota">€ 0,00</div></div>
+                    <div><div class="metric-title">Quota (1/3)</div><div class="metric-value small orange" id="ed-quota">€ 0,00</div></div>
                 </div>
             </div>
 
+            <!-- SEZIONE: WSQK -->
             <div class="card">
-                <h2>Dettaglio: WSQK</h2>
+                <h2>Dettaglio WSQK</h2>
                 <div class="grid-2">
                     <div><div class="metric-title">Ordini</div><div class="metric-value small" id="ws-ordini">0</div></div>
-                    <div><div class="metric-title">Netto WSQK</div><div class="metric-value small green" id="ws-netto">€ 0,00</div></div>
+                    <div><div class="metric-title">Netto</div><div class="metric-value small green" id="ws-netto">€ 0,00</div></div>
                 </div>
                 <div class="grid-2 no-margin">
                     <div><div class="metric-title">Lordo</div><div class="metric-value small" style="font-size: 16px;" id="ws-lordo">€ 0,00</div></div>
-                    <div><div class="metric-title">Comm. RB</div><div class="metric-value small" style="font-size: 16px; color: #ff3b30;" id="ws-comm-rb">€ 0,00</div></div>
+                    <div><div class="metric-title">Trattenute RB</div><div class="metric-value small" style="font-size: 16px; color: #ff3b30;" id="ws-comm-rb">€ 0,00</div></div>
                 </div>
             </div>
 
+            <!-- SEZIONE: EDDIE -->
             <div class="card">
-                <h2>Dettaglio: Eddie</h2>
+                <h2>Dettaglio Eddie</h2>
                 <div class="grid-2">
                     <div><div class="metric-title">Ordini</div><div class="metric-value small" id="ed-ordini">0</div></div>
-                    <div><div class="metric-title">Netto Eddie</div><div class="metric-value small green" id="ed-netto">€ 0,00</div></div>
+                    <div><div class="metric-title">Netto</div><div class="metric-value small green" id="ed-netto">€ 0,00</div></div>
                 </div>
                 <div class="grid-2 no-margin">
                     <div><div class="metric-title">Lordo</div><div class="metric-value small" style="font-size: 16px;" id="ed-lordo">€ 0,00</div></div>
-                    <div><div class="metric-title">Comm. RB</div><div class="metric-value small" style="font-size: 16px; color: #ff3b30;" id="ed-comm-rb">€ 0,00</div></div>
+                    <div><div class="metric-title">Trattenute RB</div><div class="metric-value small" style="font-size: 16px; color: #ff3b30;" id="ed-comm-rb">€ 0,00</div></div>
                 </div>
             </div>
 
+            <!-- GRAFICO PAESI -->
             <div class="card">
-                <div class="metric-title">Top 5 Paesi</div>
-                <div class="chart-container"><canvas id="countryChart"></canvas></div>
+                <h2>Top 5 Mercati Nazionali</h2>
+                <div class="chart-container">
+                    <canvas id="countryChart"></canvas>
+                </div>
             </div>
+
+            <!-- GRAFICO VENDITE GIORNALIERE -->
+            <div class="card">
+                <h2>Andamento Vendite Giornaliere</h2>
+                <div class="chart-container">
+                    <canvas id="dailyChart"></canvas>
+                </div>
+            </div>
+
         </div>
 
     </div>
 
     <script>
         // ==========================================
-        // 1. INSERISCI QUI LE TUE CHIAVI SUPABASE
+        // INSERISCI QUI LE TUE CHIAVI SUPABASE
         // ==========================================
         const SUPABASE_URL = 'https://koeihdtefqnqlalcccbs.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_5YxgclO6KIM8qgGPRHNFrg_bJeTnxTO';
         
         let supabaseClient;
-        let myChart = null;
+        let myCountryChart = null;
+        let myDailyChart = null;
         let allTransactions = [];
 
         const formatEur = (num) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(num);
@@ -223,16 +362,28 @@
         const iconMoon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`;
         const iconSun = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`;
         const iconUpload = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>`;
+        const iconSpinner = `<div class="spinner" style="width:16px; height:16px; margin:0; border-width:2px; border-top-color:var(--ios-orange);"></div>`;
+        const iconSuccess = `<svg viewBox="0 0 24 24" fill="none" stroke="var(--ios-green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+        const iconError = `<svg viewBox="0 0 24 24" fill="none" stroke="#ff3b30" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>`;
 
         function showError(msg) {
             const errBox = document.getElementById('error-box');
-            errBox.innerHTML = `🔴 Errore: <b>${msg}</b>`;
-            errBox.style.display = 'block';
+            if(errBox) {
+                errBox.innerHTML = `🔴 Errore: <b>${msg}</b>`;
+                errBox.style.display = 'block';
+            }
             console.error(msg);
         }
 
+        function setElText(id, text) {
+            const el = document.getElementById(id);
+            if (el) {
+                el.innerText = text;
+            }
+        }
+
         // ==========================================
-        // TEMA E LOGHI INVERTITI COME RICHIESTO
+        // GESTIONE LOGHI E TEMA
         // ==========================================
         function applyTheme(isDark) {
             const themeBtn = document.getElementById('theme-toggle');
@@ -242,13 +393,11 @@
             if (isDark) {
                 document.body.classList.add('dark-mode');
                 if (themeBtn) themeBtn.innerHTML = iconSun; 
-                // Modalità Notte (Sfondo Nero) -> Carica il file NERO_brickmind
                 if (loginLogo) loginLogo.src = 'Vettoriale 2026 NERO_brickmind.png';
                 if (dashLogo) dashLogo.src = 'Vettoriale 2026 NERO_brickmind.png';
             } else {
                 document.body.classList.remove('dark-mode');
                 if (themeBtn) themeBtn.innerHTML = iconMoon; 
-                // Modalità Giorno (Sfondo Bianco) -> Carica il file BIANCO_brickmind
                 if (loginLogo) loginLogo.src = 'Vettoriale 2026 BIANCO_brickmind.png';
                 if (dashLogo) dashLogo.src = 'Vettoriale 2026 BIANCO_brickmind.png';
             }
@@ -269,16 +418,18 @@
         }
 
         // ==========================================
-        // AVVIO PROTETTO
+        // AVVIO APP E AUTENTICAZIONE
         // ==========================================
         document.addEventListener("DOMContentLoaded", async () => {
             initTheme(); 
 
             try {
                 if (SUPABASE_URL.includes("INSERISCI_QUI")) throw new Error("Inserisci le tue chiavi Supabase nel codice HTML.");
-                if (typeof window.supabase === 'undefined') throw new Error("Libreria Supabase bloccata (AdBlocker o Rete).");
-
-                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+                    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false }
+                });
+                
                 const { data, error } = await supabaseClient.auth.getSession();
                 if (error) throw error;
 
@@ -296,20 +447,21 @@
             const errorMsg = document.getElementById('login-error');
             errorMsg.style.display = 'none';
 
-            if(!email || !password) { errorMsg.innerText = "Compila tutti i campi."; errorMsg.style.display = 'block'; return; }
+            if(!email || !password) { errorMsg.style.display = 'block'; return; }
 
             const { data, error } = await supabaseClient.auth.signInWithPassword({ email: email, password: password });
-            if (error) { errorMsg.innerText = "Credenziali errate."; errorMsg.style.display = 'block'; } 
+            if (error) { errorMsg.style.display = 'block'; } 
             else { document.getElementById('login-view').style.display = 'none'; showDashboard(); }
         }
 
         async function handleLogout() {
             await supabaseClient.auth.signOut();
+            localStorage.removeItem('theme'); 
             window.location.reload();
         }
 
         // ==========================================
-        // LOGICA DATI E UPLOAD CSV
+        // GESTIONE DATI E CSV
         // ==========================================
         function showDashboard() {
             document.getElementById('dashboard-view').style.display = 'block';
@@ -321,7 +473,7 @@
             if (!file) return;
 
             const btnLabel = document.getElementById('upload-label');
-            btnLabel.innerHTML = `<span style="color:var(--ios-orange);">Caricamento...</span>`;
+            btnLabel.innerHTML = iconSpinner;
 
             Papa.parse(file, {
                 header: true,
@@ -330,24 +482,18 @@
                     const cleanRows = results.data.filter(r => r.order_number);
 
                     try {
-                        const { data, error } = await supabaseClient
+                        const { error } = await supabaseClient
                             .from('transactions')
                             .upsert(cleanRows, { onConflict: 'order_number' });
 
                         if (error) throw error;
-
-                        btnLabel.innerHTML = `<span style="color:var(--ios-green);">Aggiornato</span>`;
+                        btnLabel.innerHTML = iconSuccess;
                         loadDatabaseData();
-
                     } catch (err) {
+                        btnLabel.innerHTML = iconError;
                         console.error(err);
-                        btnLabel.innerHTML = `<span style="color:#ff3b30;">Errore DB</span>`;
                     }
-
-                    setTimeout(() => {
-                        btnLabel.innerHTML = iconUpload + ` <span>Carica CSV</span>`;
-                        btnLabel.style.color = "var(--ios-blue)";
-                    }, 3000);
+                    setTimeout(() => { btnLabel.innerHTML = iconUpload; }, 3000);
                 }
             });
         }
@@ -355,32 +501,39 @@
         async function loadDatabaseData() {
             const statusText = document.getElementById('db-status');
             try {
-                statusText.innerText = "Sincronizzazione in corso...";
+                statusText.innerText = "Sincronizzazione...";
                 const { data, error } = await supabaseClient.from('transactions').select('*');
-                
                 if (error) throw new Error(error.message);
 
                 if (!data || data.length === 0) {
-                    statusText.innerText = "Database vuoto. Carica un CSV.";
+                    statusText.innerText = "Nessun dato. Carica un CSV.";
                     return;
                 }
 
                 const uniqueMonths = new Set();
                 allTransactions = data.map(row => {
-                    let d = new Date(row.purchased || row.created_at || "2024-01-01");
+                    let dStr = row.purchased || row.created_at;
+                    let d = new Date(dStr || "2024-01-01");
                     let monthLabel = "Sconosciuto";
+                    
                     if (!isNaN(d)) {
                         let rawLabel = d.toLocaleString('it-IT', { month: 'long', year: 'numeric' });
                         monthLabel = rawLabel.charAt(0).toUpperCase() + rawLabel.slice(1);
                     }
                     row.monthLabel = monthLabel;
+                    
+                    if (dStr && typeof dStr === 'string') {
+                        row.dayKey = dStr.split(' ')[0].split('T')[0]; 
+                    } else {
+                        row.dayKey = null;
+                    }
+
                     uniqueMonths.add(monthLabel);
                     return row;
                 });
 
                 const selector = document.getElementById('monthSelector');
-                selector.innerHTML = '<option value="ALL">Tutti i mesi</option>';
-                
+                selector.innerHTML = '<option value="ALL">Storico</option>';
                 Array.from(uniqueMonths).sort().forEach(month => {
                     if(month !== "Sconosciuto") {
                         let option = document.createElement('option');
@@ -388,23 +541,23 @@
                     }
                 });
 
-                statusText.innerText = `Aggiornato: ${allTransactions.length} ordini caricati`;
+                statusText.innerText = `DB: ${allTransactions.length} vendite`;
                 updateDashboardView();
             } catch (err) {
                 statusText.innerHTML = `🔴 Errore DB: <b>${err.message}</b>`;
                 statusText.style.color = '#ff3b30';
-                console.error(err);
             }
         }
 
         function updateDashboardView() {
             const selectedMonth = document.getElementById('monthSelector').value;
-            document.getElementById('card-title').innerText = selectedMonth === 'ALL' ? 'Riepilogo Globale' : `Riepilogo: ${selectedMonth}`;
+            setElText('card-title', selectedMonth === 'ALL' ? 'Storico Globale' : `Mensile: ${selectedMonth}`);
 
             let filteredData = selectedMonth === 'ALL' ? allTransactions : allTransactions.filter(row => row.monthLabel === selectedMonth);
 
             let wsLordo = 0, wsOrdini = 0, edLordo = 0, edOrdini = 0;
             const countryCounts = {};
+            const dailyCounts = {};
 
             filteredData.forEach(row => {
                 if (row.is_refunded === true || row.is_refunded === "True") return;
@@ -414,71 +567,91 @@
                 else if (row.moc__set_num === 'MOC-250117') { edOrdini++; edLordo += costo; }
 
                 if (row.buyer_country) countryCounts[row.buyer_country] = (countryCounts[row.buyer_country] || 0) + 1;
+                if (row.dayKey) dailyCounts[row.dayKey] = (dailyCounts[row.dayKey] || 0) + 1;
             });
 
-            // Calcoli base
             let wsCommRB = wsLordo * 0.13; let wsCommPP = wsLordo * 0.08; let wsNetto = wsLordo - wsCommRB - wsCommPP;
             let edCommRB = edLordo * 0.13; let edCommPP = edLordo * 0.08; let edNetto = edLordo - edCommRB - edCommPP;
 
-            // Calcoli globali
             let totLordo = wsLordo + edLordo;
-            let totOrdini = wsOrdini + edOrdini;
             let totNetto = wsNetto + edNetto; 
             let totCommRB = wsCommRB + edCommRB;
             let totCommPP = wsCommPP + edCommPP;
             let fattRB = totLordo - totCommRB;
 
-            // Quote Individuali
-            let wsQuotaIndiv = wsNetto / 3;
-            let edQuotaIndiv = edNetto / 3;
-
-            // Assegnazione Riepilogo Globale
-            document.getElementById('tot-netto').innerText = formatEur(totNetto);
-            document.getElementById('tot-lordo').innerText = formatEur(totLordo);
-            document.getElementById('tot-fatt-rb').innerText = formatEur(fattRB);
-            document.getElementById('tot-ordini').innerText = totOrdini;
-            document.getElementById('tot-comm-rb').innerText = formatEur(totCommRB);
-            document.getElementById('tot-comm-pp').innerText = formatEur(totCommPP);
+            setElText('tot-netto', formatEur(totNetto));
+            setElText('tot-lordo', formatEur(totLordo));
+            setElText('tot-fatt-rb', formatEur(fattRB));
+            setElText('tot-ordini', wsOrdini + edOrdini);
+            setElText('tot-comm-rb', formatEur(totCommRB));
+            setElText('tot-comm-pp', formatEur(totCommPP));
             
-            document.getElementById('glob-ws-netto').innerText = formatEur(wsNetto);
-            document.getElementById('tot-quota').innerText = formatEur(wsQuotaIndiv);
+            setElText('glob-ws-netto', formatEur(wsNetto));
+            setElText('tot-quota', formatEur(wsNetto / 3));
+            setElText('glob-ed-netto', formatEur(edNetto));
+            setElText('ed-quota', formatEur(edNetto / 3));
 
-            document.getElementById('glob-ed-netto').innerText = formatEur(edNetto);
-            document.getElementById('ed-quota').innerText = formatEur(edQuotaIndiv);
+            setElText('ws-ordini', wsOrdini);
+            setElText('ws-lordo', formatEur(wsLordo));
+            setElText('ws-comm-rb', formatEur(wsCommRB));
+            setElText('ws-netto', formatEur(wsNetto));
 
-            // Assegnazione Dettagli WSQK
-            document.getElementById('ws-ordini').innerText = wsOrdini; 
-            document.getElementById('ws-lordo').innerText = formatEur(wsLordo);
-            document.getElementById('ws-comm-rb').innerText = formatEur(wsCommRB);
-            document.getElementById('ws-netto').innerText = formatEur(wsNetto);
+            setElText('ed-ordini', edOrdini);
+            setElText('ed-lordo', formatEur(edLordo));
+            setElText('ed-comm-rb', formatEur(edCommRB));
+            setElText('ed-netto', formatEur(edNetto));
 
-            // Assegnazione Dettagli Eddie
-            document.getElementById('ed-ordini').innerText = edOrdini; 
-            document.getElementById('ed-lordo').innerText = formatEur(edLordo);
-            document.getElementById('ed-comm-rb').innerText = formatEur(edCommRB);
-            document.getElementById('ed-netto').innerText = formatEur(edNetto);
+            renderCharts(countryCounts, dailyCounts);
+        }
 
-            // Grafico
-            const sortedCountries = Object.entries(countryCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
-            const ctx = document.getElementById('countryChart').getContext('2d');
-            
+        function renderCharts(countryData, dailyData) {
             const isDarkMode = document.body.classList.contains('dark-mode');
             const gridColor = isDarkMode ? '#38383a' : '#e5e5ea';
             const tickColor = isDarkMode ? '#ebebf599' : '#8e8e93';
 
-            if (myChart) myChart.destroy();
-            myChart = new Chart(ctx, {
-                type: 'bar',
-                data: { labels: sortedCountries.map(i => i[0]), datasets: [{ label: 'Ordini', data: sortedCountries.map(i => i[1]), backgroundColor: '#007aff', borderRadius: 6 }] },
-                options: { 
-                    responsive: true, maintainAspectRatio: false, 
-                    plugins: { legend: { display: false } }, 
-                    scales: { 
-                        x: { grid: { display: false }, ticks: { color: tickColor } }, 
-                        y: { border: { display: false }, grid: { color: gridColor }, ticks: { color: tickColor } } 
-                    } 
-                }
-            });
+            const sortedCountries = Object.entries(countryData).sort((a, b) => b[1] - a[1]).slice(0, 5);
+            const ctx1El = document.getElementById('countryChart');
+            if (ctx1El) {
+                const ctx1 = ctx1El.getContext('2d');
+                if (myCountryChart) myCountryChart.destroy();
+                myCountryChart = new Chart(ctx1, {
+                    type: 'bar',
+                    data: { labels: sortedCountries.map(i => i[0]), datasets: [{ label: 'Vendite', data: sortedCountries.map(i => i[1]), backgroundColor: '#007aff', borderRadius: 8 }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, 
+                               scales: { x: { grid: { display: false }, ticks: { color: tickColor } }, 
+                                         y: { border: { display: false }, grid: { color: gridColor }, ticks: { color: tickColor, stepSize: 1 } } } }
+                });
+            }
+
+            const sortedDays = Object.entries(dailyData).sort((a, b) => a[0].localeCompare(b[0]));
+            const ctx2El = document.getElementById('dailyChart');
+            if (ctx2El) {
+                const ctx2 = ctx2El.getContext('2d');
+                if (myDailyChart) myDailyChart.destroy();
+                myDailyChart = new Chart(ctx2, {
+                    type: 'line',
+                    data: {
+                        labels: sortedDays.map(i => i[0].split('-')[2] || i[0]), 
+                        datasets: [{
+                            data: sortedDays.map(i => i[1]),
+                            borderColor: '#34c759',
+                            backgroundColor: 'rgba(52, 199, 89, 0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 3,
+                            pointBackgroundColor: '#34c759'
+                        }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { grid: { display: false }, ticks: { color: tickColor, maxTicksLimit: 10 } },
+                            y: { border: { display: false }, grid: { color: gridColor }, ticks: { color: tickColor, stepSize: 1 } }
+                        }
+                    }
+                });
+            }
         }
     </script>
 </body>
