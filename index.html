@@ -5,7 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>BrickMind Dashboard RB</title>
     
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
 
@@ -246,7 +248,7 @@
                         </svg>
                     </label>
                     <!-- Input file nascosto via CSS (opacity 0, absolute) -->
-                    <input type="file" id="csv-file" accept=".csv" onchange="uploadToSupabase(event)">
+                    <input type="file" id="csv-file" accept=".csv" onchange="uploadToFirestore(event)">
                     
                     <button class="icon-btn logout" onclick="handleLogout()">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -347,12 +349,20 @@
 
     <script>
         // ==========================================
-        // INSERISCI QUI LE TUE CHIAVI SUPABASE
+        // INSERISCI QUI LA TUA CONFIGURAZIONE FIREBASE
+        // (Console Firebase → Impostazioni progetto → Le tue app → SDK)
         // ==========================================
-        const SUPABASE_URL = 'https://koeihdtefqnqlalcccbs.supabase.co';
-        const SUPABASE_ANON_KEY = 'sb_publishable_5YxgclO6KIM8qgGPRHNFrg_bJeTnxTO';
-        
-        let supabaseClient;
+        const firebaseConfig = {
+            apiKey:            "AIzaSyC5o_j0qP2G8dHhNsy-FFSxAhUhHae7k9M",
+            authDomain:        "dashboard-brickmind.firebaseapp.com",
+            projectId:         "dashboard-brickmind",
+            storageBucket:     "dashboard-brickmind.firebasestorage.app",
+            messagingSenderId: "718440653573",
+            appId:             "1:718440653573:web:16bbf81d5480471ad40d6c"
+        };
+
+        let auth;   // Firebase Authentication
+        let db;     // Cloud Firestore
         let myCountryChart = null;
         let myDailyChart = null;
         let allTransactions = [];
@@ -420,23 +430,28 @@
         // ==========================================
         // AVVIO APP E AUTENTICAZIONE
         // ==========================================
-        document.addEventListener("DOMContentLoaded", async () => {
-            initTheme(); 
+        document.addEventListener("DOMContentLoaded", () => {
+            initTheme();
 
             try {
-                if (SUPABASE_URL.includes("INSERISCI_QUI")) throw new Error("Inserisci le tue chiavi Supabase nel codice HTML.");
-                
-                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-                    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false }
-                });
-                
-                const { data, error } = await supabaseClient.auth.getSession();
-                if (error) throw error;
+                if (firebaseConfig.apiKey.includes("INSERISCI")) throw new Error("Inserisci la configurazione Firebase nel codice HTML.");
 
-                document.getElementById('startup-view').style.display = 'none';
-                
-                if (data && data.session) showDashboard();
-                else document.getElementById('login-view').style.display = 'block';
+                firebase.initializeApp(firebaseConfig);
+                auth = firebase.auth();
+                db   = firebase.firestore();
+
+                // Firebase mantiene la sessione in locale e la ripristina in modo asincrono:
+                // onAuthStateChanged è l'unica fonte di verità per login/logout.
+                auth.onAuthStateChanged((user) => {
+                    document.getElementById('startup-view').style.display = 'none';
+                    if (user) {
+                        document.getElementById('login-view').style.display = 'none';
+                        showDashboard();
+                    } else {
+                        document.getElementById('dashboard-view').style.display = 'none';
+                        document.getElementById('login-view').style.display = 'block';
+                    }
+                });
 
             } catch (err) { showError(err.message); }
         });
@@ -449,14 +464,17 @@
 
             if(!email || !password) { errorMsg.style.display = 'block'; return; }
 
-            const { data, error } = await supabaseClient.auth.signInWithPassword({ email: email, password: password });
-            if (error) { errorMsg.style.display = 'block'; } 
-            else { document.getElementById('login-view').style.display = 'none'; showDashboard(); }
+            try {
+                await auth.signInWithEmailAndPassword(email, password);
+                // Al successo, onAuthStateChanged mostra automaticamente la dashboard.
+            } catch (error) {
+                errorMsg.style.display = 'block';
+            }
         }
 
         async function handleLogout() {
-            await supabaseClient.auth.signOut();
-            localStorage.removeItem('theme'); 
+            await auth.signOut();
+            localStorage.removeItem('theme');
             window.location.reload();
         }
 
@@ -468,7 +486,10 @@
             loadDatabaseData();
         }
 
-        function uploadToSupabase(event) {
+        // ID documento sicuro per Firestore (niente '/', non vuoto).
+        const docIdFromOrder = (orderNumber) => String(orderNumber).replace(/\//g, '_').trim();
+
+        function uploadToFirestore(event) {
             const file = event.target.files[0];
             if (!file) return;
 
@@ -482,11 +503,19 @@
                     const cleanRows = results.data.filter(r => r.order_number);
 
                     try {
-                        const { error } = await supabaseClient
-                            .from('transactions')
-                            .upsert(cleanRows, { onConflict: 'order_number' });
+                        // Upsert come Supabase (onConflict: order_number):
+                        // usiamo order_number come ID documento + merge:true.
+                        // Firestore limita ogni batch a 500 scritture → suddividiamo.
+                        const col = db.collection('transactions');
+                        const CHUNK = 450;
+                        for (let i = 0; i < cleanRows.length; i += CHUNK) {
+                            const batch = db.batch();
+                            cleanRows.slice(i, i + CHUNK).forEach(row => {
+                                batch.set(col.doc(docIdFromOrder(row.order_number)), row, { merge: true });
+                            });
+                            await batch.commit();
+                        }
 
-                        if (error) throw error;
                         btnLabel.innerHTML = iconSuccess;
                         loadDatabaseData();
                     } catch (err) {
@@ -502,8 +531,8 @@
             const statusText = document.getElementById('db-status');
             try {
                 statusText.innerText = "Sincronizzazione...";
-                const { data, error } = await supabaseClient.from('transactions').select('*');
-                if (error) throw new Error(error.message);
+                const snapshot = await db.collection('transactions').get();
+                const data = snapshot.docs.map(doc => doc.data());
 
                 if (!data || data.length === 0) {
                     statusText.innerText = "Nessun dato. Carica un CSV.";
