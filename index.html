@@ -539,36 +539,40 @@
                     return;
                 }
 
-                const uniqueMonths = new Set();
+                // Map etichetta-mese → chiave d'ordinamento (anno*12 + mese) per ordinare cronologicamente
+                const monthSortKeys = new Map();
                 allTransactions = data.map(row => {
                     let dStr = row.purchased || row.created_at;
                     let d = new Date(dStr || "2024-01-01");
                     let monthLabel = "Sconosciuto";
-                    
+
                     if (!isNaN(d)) {
                         let rawLabel = d.toLocaleString('it-IT', { month: 'long', year: 'numeric' });
                         monthLabel = rawLabel.charAt(0).toUpperCase() + rawLabel.slice(1);
+                        if (!monthSortKeys.has(monthLabel)) {
+                            monthSortKeys.set(monthLabel, d.getFullYear() * 12 + d.getMonth());
+                        }
                     }
                     row.monthLabel = monthLabel;
-                    
+
                     if (dStr && typeof dStr === 'string') {
-                        row.dayKey = dStr.split(' ')[0].split('T')[0]; 
+                        row.dayKey = dStr.split(' ')[0].split('T')[0];
                     } else {
                         row.dayKey = null;
                     }
 
-                    uniqueMonths.add(monthLabel);
                     return row;
                 });
 
                 const selector = document.getElementById('monthSelector');
                 selector.innerHTML = '<option value="ALL">Storico</option>';
-                Array.from(uniqueMonths).sort().forEach(month => {
-                    if(month !== "Sconosciuto") {
+                // Ordine cronologico (dal più recente al più vecchio) anziché alfabetico
+                Array.from(monthSortKeys.entries())
+                    .sort((a, b) => b[1] - a[1])
+                    .forEach(([month]) => {
                         let option = document.createElement('option');
                         option.value = month; option.innerText = month; selector.appendChild(option);
-                    }
-                });
+                    });
 
                 statusText.innerText = `DB: ${allTransactions.length} vendite`;
                 updateDashboardView();
