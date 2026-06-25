@@ -211,9 +211,37 @@
             .icon-btn svg { width: 20px; height: 20px; }
             select { font-size: 13px; padding: 6px 10px; }
         }
+
+        /* --- ULTIMO AGGIORNAMENTO --- */
+        #last-sync { font-size: 12px; font-weight: 500; color: var(--text-sec); margin: -8px 4px 20px; display: flex; align-items: center; gap: 6px; }
+        #last-sync.stale { color: var(--ios-orange); font-weight: 600; }
+        #last-sync .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ios-green); flex-shrink: 0; }
+        #last-sync.stale .dot { background: var(--ios-orange); }
+
+        /* --- DRAG & DROP OVERLAY --- */
+        #drop-overlay { position: fixed; inset: 0; z-index: 1000; background: rgba(0,122,255,0.10);
+            backdrop-filter: blur(3px); display: none; align-items: center; justify-content: center; pointer-events: none; }
+        #drop-overlay.active { display: flex; }
+        #drop-overlay .drop-box { border: 3px dashed var(--ios-blue); border-radius: 24px; padding: 36px 52px;
+            background: var(--card-bg); color: var(--ios-blue); font-size: 17px; font-weight: 700; text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.25); }
+
+        /* --- TOAST --- */
+        #toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(20px);
+            background: #1c1c1e; color: #fff; padding: 12px 20px; border-radius: 12px; font-size: 14px; font-weight: 500;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.3); opacity: 0; pointer-events: none; max-width: 90vw; text-align: center;
+            transition: opacity .25s ease, transform .25s ease; z-index: 1100; }
+        #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+        #toast.error { background: #ff3b30; }
+        #toast.success { background: var(--ios-green); }
     </style>
 </head>
 <body>
+
+    <!-- Overlay drag & drop CSV -->
+    <div id="drop-overlay"><div class="drop-box">📥 Rilascia qui il CSV Rebrickable</div></div>
+    <!-- Notifiche -->
+    <div id="toast"></div>
 
     <div class="app-container">
         
@@ -274,6 +302,9 @@
                     <option value="ALL">Storico</option>
                 </select>
             </div>
+
+            <!-- Indicatore ultimo aggiornamento dati -->
+            <div id="last-sync"><span class="dot"></span><span id="last-sync-text"></span></div>
 
             <!-- SEZIONE: GLOBALE -->
             <div class="card">
@@ -490,28 +521,83 @@
         // ==========================================
         function showDashboard() {
             document.getElementById('dashboard-view').style.display = 'block';
+            updateSyncInfo();
             loadDatabaseData();
         }
 
         // ID documento sicuro per Firestore (niente '/', non vuoto).
         const docIdFromOrder = (orderNumber) => String(orderNumber).replace(/\//g, '_').trim();
 
-        function uploadToFirestore(event) {
-            const file = event.target.files[0];
+        // ════════ NOTIFICHE (toast) ════════
+        let toastTimer = null;
+        function toast(msg, type) {
+            const t = document.getElementById('toast');
+            if (!t) return;
+            t.textContent = msg;
+            t.className = 'show' + (type ? ' ' + type : '');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => { t.className = ''; }, 3800);
+        }
+
+        // ════════ INDICATORE "ULTIMO AGGIORNAMENTO" ════════
+        // Salvato in locale (per dispositivo). 2 sync/giorno → segnala come "stale" oltre le 12h.
+        const LAST_SYNC_KEY = 'brickmind_last_sync';
+        function markSynced() {
+            try { localStorage.setItem(LAST_SYNC_KEY, String(Date.now())); } catch (e) {}
+            updateSyncInfo();
+        }
+        function updateSyncInfo() {
+            const box = document.getElementById('last-sync');
+            const txt = document.getElementById('last-sync-text');
+            if (!box || !txt) return;
+            let ts = NaN;
+            try { ts = parseInt(localStorage.getItem(LAST_SYNC_KEY), 10); } catch (e) {}
+            if (!ts || isNaN(ts)) {
+                txt.textContent = 'Ultimo aggiornamento: mai — importa un CSV';
+                box.classList.add('stale');
+                return;
+            }
+            const diff = Date.now() - ts;
+            const h = Math.floor(diff / 3600000);
+            const m = Math.floor((diff % 3600000) / 60000);
+            let rel;
+            if (h < 1)       rel = m <= 1 ? 'poco fa' : `${m} min fa`;
+            else if (h < 24) rel = `${h} h fa`;
+            else             rel = `${Math.floor(h / 24)} g fa`;
+            txt.textContent = 'Ultimo aggiornamento: ' + rel;
+            box.classList.toggle('stale', diff > 12 * 3600000); // promemoria oltre 12h
+        }
+        setInterval(updateSyncInfo, 60000); // mantiene aggiornato il "X fa"
+
+        // ════════ IMPORT CSV (cuore condiviso: input file + drag & drop) ════════
+        function processCsvFile(file) {
             if (!file) return;
+            if (!/\.csv$/i.test(file.name)) { toast('Serve un file .csv', 'error'); return; }
 
             const btnLabel = document.getElementById('upload-label');
             btnLabel.innerHTML = iconSpinner;
+            const resetBtn = () => setTimeout(() => { btnLabel.innerHTML = iconUpload; }, 3000);
 
             Papa.parse(file, {
                 header: true,
                 skipEmptyLines: true,
                 complete: async function(results) {
+                    // Rilevamento export Rebrickable: deve esistere la colonna "order_number"
+                    const fields = results.meta.fields || [];
+                    if (!fields.includes('order_number')) {
+                        btnLabel.innerHTML = iconError;
+                        toast('Non sembra un export vendite Rebrickable (manca "order_number")', 'error');
+                        return resetBtn();
+                    }
                     const cleanRows = results.data.filter(r => r.order_number);
+                    if (cleanRows.length === 0) {
+                        btnLabel.innerHTML = iconError;
+                        toast('Nessuna vendita valida nel file', 'error');
+                        return resetBtn();
+                    }
 
                     try {
-                        // Upsert come Supabase (onConflict: order_number):
-                        // usiamo order_number come ID documento + merge:true.
+                        // Upsert (onConflict: order_number) → order_number come ID documento + merge:true.
                         // Firestore limita ogni batch a 500 scritture → suddividiamo.
                         const col = db.collection('transactions');
                         const CHUNK = 450;
@@ -522,17 +608,60 @@
                             });
                             await batch.commit();
                         }
-
                         btnLabel.innerHTML = iconSuccess;
+                        markSynced();
+                        toast(`Importate ${cleanRows.length} vendite ✓`, 'success');
                         loadDatabaseData();
                     } catch (err) {
                         btnLabel.innerHTML = iconError;
+                        toast('Errore durante il salvataggio su Firebase', 'error');
                         console.error(err);
                     }
-                    setTimeout(() => { btnLabel.innerHTML = iconUpload; }, 3000);
+                    resetBtn();
+                },
+                error: function(err) {
+                    btnLabel.innerHTML = iconError;
+                    toast('Impossibile leggere il file', 'error');
+                    console.error(err);
+                    resetBtn();
                 }
             });
         }
+
+        // Wrapper per l'input file (azzera il value così puoi ricaricare lo stesso file)
+        function uploadToFirestore(event) {
+            processCsvFile(event.target.files[0]);
+            event.target.value = '';
+        }
+
+        // ════════ DRAG & DROP del CSV sulla dashboard ════════
+        (function initDragDrop() {
+            const overlay = document.getElementById('drop-overlay');
+            if (!overlay) return;
+            let depth = 0;
+            const hasFiles = e => e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files');
+            const dashboardVisible = () => {
+                const d = document.getElementById('dashboard-view');
+                return d && d.style.display === 'block';
+            };
+            window.addEventListener('dragenter', e => {
+                if (!dashboardVisible() || !hasFiles(e)) return;
+                e.preventDefault(); depth++; overlay.classList.add('active');
+            });
+            window.addEventListener('dragover', e => {
+                if (dashboardVisible() && hasFiles(e)) e.preventDefault();
+            });
+            window.addEventListener('dragleave', () => {
+                if (!dashboardVisible()) return;
+                if (--depth <= 0) { depth = 0; overlay.classList.remove('active'); }
+            });
+            window.addEventListener('drop', e => {
+                if (!dashboardVisible()) return;
+                e.preventDefault(); depth = 0; overlay.classList.remove('active');
+                const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+                if (file) processCsvFile(file);
+            });
+        })();
 
         async function loadDatabaseData() {
             const statusText = document.getElementById('db-status');
