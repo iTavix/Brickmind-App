@@ -728,6 +728,23 @@
             }
         }
 
+        // Parsing robusto di un importo (FIX #2): gestisce virgola/punto decimale,
+        // simboli valuta e spazi; qualsiasi valore non valido diventa 0 (niente "NaN €").
+        function parseAmount(v) {
+            if (v == null) return 0;
+            if (typeof v === 'number') return isFinite(v) ? v : 0;
+            let s = String(v).trim().replace(/[^\d.,-]/g, ''); // tiene solo cifre, . , -
+            if (s.includes('.') && s.includes(',')) {
+                // l'ultimo separatore è quello decimale, l'altro è separatore migliaia
+                if (s.lastIndexOf(',') > s.lastIndexOf('.')) s = s.replace(/\./g, '').replace(',', '.');
+                else s = s.replace(/,/g, '');
+            } else if (s.includes(',')) {
+                s = s.replace(',', '.'); // sola virgola → decimale
+            }
+            const n = parseFloat(s);
+            return isFinite(n) ? n : 0;
+        }
+
         function updateDashboardView() {
             const selectedMonth = document.getElementById('monthSelector').value;
             setElText('card-title', selectedMonth === 'ALL' ? 'Storico Globale' : `Mensile: ${selectedMonth}`);
@@ -740,10 +757,15 @@
 
             filteredData.forEach(row => {
                 if (row.is_refunded === true || row.is_refunded === "True") return;
-                const costo = row.cost ? parseFloat(row.cost) : 0;
+                const costo = parseAmount(row.cost); // FIX #2: parsing robusto
 
-                if (row.moc__set_num === 'MOC-247784') { wsOrdini++; wsLordo += costo; } 
-                else if (row.moc__set_num === 'MOC-250117') { edOrdini++; edLordo += costo; }
+                const isWs = row.moc__set_num === 'MOC-247784';
+                const isEd = row.moc__set_num === 'MOC-250117';
+                // FIX #4: conta SOLO i 2 progetti, così grafici e "Volume Vendite" sono coerenti coi totali economici
+                if (!isWs && !isEd) return;
+
+                if (isWs) { wsOrdini++; wsLordo += costo; }
+                else      { edOrdini++; edLordo += costo; }
 
                 if (row.buyer_country) countryCounts[row.buyer_country] = (countryCounts[row.buyer_country] || 0) + 1;
                 if (row.dayKey) dailyCounts[row.dayKey] = (dailyCounts[row.dayKey] || 0) + 1;
@@ -756,7 +778,7 @@
             let totNetto = wsNetto + edNetto; 
             let totCommRB = wsCommRB + edCommRB;
             let totCommPP = wsCommPP + edCommPP;
-            let fattRB = totLordo - totCommRB;
+            let fattRB = totLordo - totCommRB - totCommPP; // FIX #7: incassato netto (lordo − comm. RB − comm. PayPal)
 
             setElText('tot-netto', formatEur(totNetto));
             setElText('tot-lordo', formatEur(totLordo));
@@ -780,10 +802,10 @@
             setElText('ed-comm-rb', formatEur(edCommRB));
             setElText('ed-netto', formatEur(edNetto));
 
-            renderCharts(countryCounts, dailyCounts);
+            renderCharts(countryCounts, dailyCounts, selectedMonth === 'ALL');
         }
 
-        function renderCharts(countryData, dailyData) {
+        function renderCharts(countryData, dailyData, isHistoric) {
             const isDarkMode = document.body.classList.contains('dark-mode');
             const gridColor = isDarkMode ? '#38383a' : '#e5e5ea';
             const tickColor = isDarkMode ? '#ebebf599' : '#8e8e93';
@@ -810,7 +832,8 @@
                 myDailyChart = new Chart(ctx2, {
                     type: 'line',
                     data: {
-                        labels: sortedDays.map(i => i[0].split('-')[2] || i[0]), 
+                        // FIX #5: in "Storico" usa dd/mm (mesi diversi non collidono); per mese singolo solo il giorno
+                        labels: sortedDays.map(i => { const p = i[0].split('-'); return isHistoric ? `${p[2]}/${p[1]}` : (p[2] || i[0]); }),
                         datasets: [{
                             data: sortedDays.map(i => i[1]),
                             borderColor: '#34c759',
