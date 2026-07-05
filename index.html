@@ -129,7 +129,7 @@
 
         /* --- HEADER E TASTI --- */
         .header-box { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .header-left { display: flex; align-items: center; gap: 8px; }
+        .header-left { display: flex; align-items: center; gap: 8px; cursor: pointer; }
         .header-tools { display: flex; align-items: center; gap: 6px; }
 
         .icon-btn {
@@ -162,7 +162,9 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 14px;
             background-color: var(--card-bg);
             padding: 12px 16px;
             border-radius: 14px;
@@ -170,6 +172,23 @@
             transition: background-color 0.3s ease;
         }
         #db-status { font-size: 13px; font-weight: 500; color: var(--text-sec); }
+
+        /* --- CHIPS PERIODO (sostituiscono il menù a tendina) --- */
+        .chips {
+            display: flex; gap: 8px; overflow-x: auto;
+            padding: 2px 2px 8px; margin-bottom: 12px;
+            scrollbar-width: none; -webkit-overflow-scrolling: touch;
+        }
+        .chips::-webkit-scrollbar { display: none; }
+        .chip {
+            flex: 0 0 auto; border: none;
+            background: var(--card-bg); color: var(--text-main);
+            font-size: 13px; font-weight: 600; padding: 8px 15px; border-radius: 999px;
+            cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            transition: background .15s, color .15s;
+        }
+        .chip.on { background: var(--ios-blue); color: #fff; }
+        .chip.year:not(.on) { color: var(--ios-blue); }
 
         select {
             background-color: var(--select-bg);
@@ -259,7 +278,8 @@
         .table-tools { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
         .table-tools input[type="search"] {
             flex: 1; min-width: 140px;
-            padding: 9px 12px; border-radius: 10px; font-size: 14px;
+            /* 16px: sotto questa soglia iOS zooma automaticamente sul focus */
+            padding: 9px 12px; border-radius: 10px; font-size: 16px;
             border: 1px solid var(--border-color);
             background: var(--bg-color); color: var(--text-main); outline: none;
         }
@@ -300,12 +320,12 @@
         .cfg-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
         .cfg-row label { font-size: 14px; font-weight: 500; }
         .cfg-num {
-            width: 84px; padding: 9px 10px; border-radius: 10px; font-size: 15px; text-align: right;
+            width: 84px; padding: 9px 10px; border-radius: 10px; font-size: 16px; text-align: right;
             border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-main); outline: none;
         }
         .proj-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
         .proj-row input {
-            flex: 1; min-width: 0; padding: 9px 10px; border-radius: 10px; font-size: 14px;
+            flex: 1; min-width: 0; padding: 9px 10px; border-radius: 10px; font-size: 16px;
             border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-main); outline: none;
         }
         .proj-row .remove-proj {
@@ -328,10 +348,14 @@
             .icon-btn { padding: 6px; }
             .icon-btn svg { width: 20px; height: 20px; }
             select { font-size: 13px; padding: 6px 10px; }
+            .chart-container { height: 190px; }
+            .chip { font-size: 12px; padding: 7px 13px; }
+            table.orders { font-size: 12px; }
+            table.orders td { padding: 8px 6px; }
         }
 
-        /* --- ULTIMO AGGIORNAMENTO --- */
-        #last-sync { font-size: 12px; font-weight: 500; color: var(--text-sec); margin: -8px 4px 20px; display: flex; align-items: center; gap: 6px; }
+        /* --- ULTIMO AGGIORNAMENTO (dentro la barra di stato) --- */
+        #last-sync { font-size: 12px; font-weight: 500; color: var(--text-sec); margin: 0; display: flex; align-items: center; gap: 6px; }
         #last-sync.stale { color: var(--ios-orange); font-weight: 600; }
         #last-sync .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ios-green); flex-shrink: 0; }
         #last-sync.stale .dot { background: var(--ios-orange); }
@@ -415,7 +439,7 @@
 
             <!-- HEADER (Logo, Titolo, Tasti Icona) -->
             <div class="header-box">
-                <div class="header-left">
+                <div class="header-left" onclick="goHome()" title="Torna allo storico">
                     <img id="dash-logo" alt="" class="dash-logo">
                     <h1>Dashboard RB</h1>
                 </div>
@@ -447,16 +471,14 @@
                 </div>
             </div>
 
-            <!-- CONTENITORE STATO E FILTRO -->
+            <!-- BARRA DI STATO (conteggio DB + ultimo aggiornamento) -->
             <div class="db-status-container">
                 <div id="db-status">Caricamento dati...</div>
-                <select id="monthSelector" onchange="updateDashboardView()">
-                    <option value="ALL">Storico</option>
-                </select>
+                <div id="last-sync"><span class="dot"></span><span id="last-sync-text"></span></div>
             </div>
 
-            <!-- Indicatore ultimo aggiornamento dati -->
-            <div id="last-sync"><span class="dot"></span><span id="last-sync-text"></span></div>
+            <!-- SELEZIONE PERIODO (chips scorrevoli) -->
+            <div id="period-chips" class="chips"></div>
 
             <div class="dash-grid">
 
@@ -500,7 +522,7 @@
                     <div class="card-head">
                         <h2>Andamento Giornaliero</h2>
                         <div class="seg" id="daily-seg">
-                            <button id="seg-daily-eur" class="on" onclick="setDailyMode('eur')">€</button>
+                            <button id="seg-daily-eur" class="on" onclick="setDailyMode('eur')">Netto €</button>
                             <button id="seg-daily-cnt" onclick="setDailyMode('cnt')">Ordini</button>
                         </div>
                     </div>
@@ -514,7 +536,7 @@
                     <div class="card-head">
                         <h2>Top 5 Mercati</h2>
                         <div class="seg" id="country-seg">
-                            <button id="seg-country-eur" class="on" onclick="setCountryMode('eur')">€</button>
+                            <button id="seg-country-eur" class="on" onclick="setCountryMode('eur')">Netto €</button>
                             <button id="seg-country-cnt" onclick="setCountryMode('cnt')">Ordini</button>
                         </div>
                     </div>
@@ -582,6 +604,7 @@
         let dailyMode = 'eur';           // grafico giornaliero: 'eur' | 'cnt'
         let countryMode = 'eur';         // grafico paesi: 'eur' | 'cnt'
         let tableLimit = 25;
+        let selectedPeriod = 'ALL';      // 'ALL' | 'Y2025' | etichetta mese ('Giugno 2026')
 
         // Configurazione progetti/commissioni: salvata su Firestore (meta/config),
         // modificabile dalla modale Impostazioni. Questi sono i valori di default.
@@ -869,7 +892,7 @@
             const txt = document.getElementById('last-sync-text');
             if (!box || !txt) return;
             if (!lastSyncTs) {
-                txt.textContent = 'Ultimo aggiornamento: mai — importa un CSV';
+                txt.textContent = 'Agg.: mai — importa un CSV';
                 box.classList.add('stale');
                 return;
             }
@@ -880,7 +903,7 @@
             if (h < 1)       rel = m <= 1 ? 'poco fa' : `${m} min fa`;
             else if (h < 24) rel = `${h} h fa`;
             else             rel = `${Math.floor(h / 24)} g fa`;
-            txt.textContent = 'Ultimo aggiornamento: ' + rel;
+            txt.textContent = 'Agg. ' + rel;
             box.classList.toggle('stale', diff > 12 * 3600000); // promemoria oltre 12h
         }
         setInterval(renderSyncInfo, 60000); // ricalcola "X fa" senza altre letture di rete
@@ -1037,35 +1060,69 @@
                 return row;
             });
 
-            // Selettore periodo: Storico + Anni (se più di uno) + Mesi (dal più recente)
-            const selector = document.getElementById('monthSelector');
-            selector.innerHTML = '<option value="ALL">Storico</option>';
-
-            const sortedYears = Array.from(years).sort((a, b) => b - a);
-            if (sortedYears.length > 1) {
-                const gy = document.createElement('optgroup');
-                gy.label = 'Anni';
-                sortedYears.forEach(y => {
-                    const o = document.createElement('option');
-                    o.value = 'Y' + y; o.textContent = String(y);
-                    gy.appendChild(o);
-                });
-                selector.appendChild(gy);
+            // Se il periodo selezionato non esiste più nei dati, torna allo storico
+            if (selectedPeriod !== 'ALL' &&
+                !monthKeyByLabel.has(selectedPeriod) &&
+                !(/^Y\d{4}$/.test(selectedPeriod) && years.has(parseInt(selectedPeriod.slice(1), 10)))) {
+                selectedPeriod = 'ALL';
             }
 
-            const gm = document.createElement('optgroup');
-            gm.label = 'Mesi';
-            Array.from(monthKeyByLabel.entries())
-                .sort((a, b) => b[1] - a[1])
-                .forEach(([month]) => {
-                    const o = document.createElement('option');
-                    o.value = month; o.textContent = month;
-                    gm.appendChild(o);
-                });
-            selector.appendChild(gm);
-
+            buildPeriodChips(Array.from(years).sort((a, b) => b - a));
             setElText('db-status', `DB: ${allTransactions.length} vendite`);
             updateDashboardView();
+        }
+
+        // ════════ SELEZIONE PERIODO (chips scorrevoli) ════════
+        // "Giugno 2026" → "Giu 26" per le etichette compatte dei chip
+        function shortMonthLabel(label) {
+            const parts = label.split(' ');
+            if (parts.length < 2) return label;
+            return parts[0].slice(0, 3) + ' ' + parts[1].slice(2);
+        }
+
+        function buildPeriodChips(sortedYears) {
+            const box = document.getElementById('period-chips');
+            if (!box) return;
+            box.innerHTML = '';
+
+            const addChip = (value, text, extraClass) => {
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.className = 'chip' + (extraClass ? ' ' + extraClass : '');
+                b.dataset.value = value;
+                b.textContent = text;
+                b.onclick = () => selectPeriod(value);
+                box.appendChild(b);
+            };
+
+            addChip('ALL', 'Storico');
+            if (sortedYears.length > 1) sortedYears.forEach(y => addChip('Y' + y, String(y), 'year'));
+            Array.from(monthKeyByLabel.entries())
+                .sort((a, b) => b[1] - a[1])
+                .forEach(([month]) => addChip(month, shortMonthLabel(month)));
+
+            syncChips();
+        }
+
+        function syncChips() {
+            document.querySelectorAll('#period-chips .chip').forEach(c => {
+                const on = c.dataset.value === selectedPeriod;
+                c.classList.toggle('on', on);
+                if (on) c.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+            });
+        }
+
+        function selectPeriod(value) {
+            selectedPeriod = value;
+            updateDashboardView();
+        }
+
+        // Click su logo/titolo: torna sempre allo storico e in cima alla pagina
+        function goHome() {
+            if (document.getElementById('dashboard-view').style.display !== 'block') return;
+            selectedPeriod = 'ALL';
+            if (allTransactions.length > 0) updateDashboardView();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         // Parsing robusto di un importo (FIX #2): gestisce virgola/punto decimale,
@@ -1160,7 +1217,8 @@
         }
 
         function updateDashboardView() {
-            const selectedMonth = document.getElementById('monthSelector').value;
+            const selectedMonth = selectedPeriod;
+            syncChips();
             let title;
             if (selectedMonth === 'ALL') title = 'Storico Globale';
             else if (/^Y\d{4}$/.test(selectedMonth)) title = `Anno ${selectedMonth.slice(1)}`;
@@ -1297,9 +1355,14 @@
             const isHistoric = selectedMonth === 'ALL' || /^Y\d{4}$/.test(selectedMonth);
             const eurTicks = { color: tickColor, callback: v => formatEurShort(v) };
             const cntTicks = { color: tickColor, stepSize: 1 };
+            // I grafici in € mostrano il NETTO (lordo × fattore commissioni), così le somme
+            // coincidono con il "Totale Netto" del riepilogo.
+            const fNet = netFactor();
 
-            // ── Top 5 mercati (€ o ordini) ──
-            const countrySource = countryMode === 'eur' ? stats.countryRev : stats.countryCnt;
+            // ── Top 5 mercati (netto € o ordini) ──
+            const countrySource = countryMode === 'eur'
+                ? Object.fromEntries(Object.entries(stats.countryRev).map(([k, v]) => [k, v * fNet]))
+                : stats.countryCnt;
             const sortedCountries = Object.entries(countrySource).sort((a, b) => b[1] - a[1]).slice(0, 5);
             const ctx1El = document.getElementById('countryChart');
             if (ctx1El) {
@@ -1316,9 +1379,9 @@
                             legend: { display: false },
                             tooltip: { callbacks: { label: (c) => {
                                 const country = c.label;
-                                const rev = stats.countryRev[country] || 0;
+                                const rev = (stats.countryRev[country] || 0) * fNet;
                                 const cnt = stats.countryCnt[country] || 0;
-                                return `${formatEur(rev)} · ${cnt} ordini`;
+                                return `${formatEur(rev)} netto · ${cnt} ordini`;
                             } } }
                         },
                         scales: {
@@ -1330,8 +1393,10 @@
                 });
             }
 
-            // ── Andamento giornaliero (€ o ordini) ──
-            const dailySource = dailyMode === 'eur' ? stats.dailyRev : stats.dailyCnt;
+            // ── Andamento giornaliero (netto € o ordini) ──
+            const dailySource = dailyMode === 'eur'
+                ? Object.fromEntries(Object.entries(stats.dailyRev).map(([k, v]) => [k, v * fNet]))
+                : stats.dailyCnt;
             const sortedDays = Object.entries(dailySource).sort((a, b) => a[0].localeCompare(b[0]));
             const ctx2El = document.getElementById('dailyChart');
             if (ctx2El) {
@@ -1355,8 +1420,13 @@
                         responsive: true, maintainAspectRatio: false,
                         plugins: {
                             legend: { display: false },
-                            tooltip: { callbacks: { label: (c) =>
-                                dailyMode === 'eur' ? formatEur(c.parsed.y) : `${c.parsed.y} ordini` } }
+                            tooltip: { callbacks: { label: (c) => {
+                                const dayKey = sortedDays[c.dataIndex][0];
+                                const cnt = stats.dailyCnt[dayKey] || 0;
+                                return dailyMode === 'eur'
+                                    ? `${formatEur(c.parsed.y)} netto · ${cnt} ordini`
+                                    : `${c.parsed.y} ordini`;
+                            } } }
                         },
                         scales: {
                             x: { grid: { display: false }, ticks: { color: tickColor, maxTicksLimit: 10 } },
@@ -1369,7 +1439,6 @@
 
             // ── Trend mensile del netto (sempre su tutto lo storico, mese selezionato evidenziato) ──
             const monthlyNetto = {};
-            const fNet = netFactor();
             allTransactions.forEach(row => {
                 if (isRefunded(row)) return;
                 if (!appConfig.projects.some(p => p.moc === row.moc__set_num)) return;
