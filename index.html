@@ -376,12 +376,25 @@
         #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
         #toast.error { background: #ff3b30; }
         #toast.success { background: var(--ios-green); }
+
+        /* --- MODALE "AGGIORNA VENDITE" (refresh guidato da Rebrickable) --- */
+        #rb-overlay {
+            position: fixed; inset: 0; z-index: 1200; display: none;
+            background: rgba(0,0,0,0.45); backdrop-filter: blur(2px);
+            align-items: flex-end; justify-content: center; padding: 16px;
+        }
+        #rb-overlay.open { display: flex; }
+        @media (min-width: 600px) { #rb-overlay { align-items: center; } }
+        #rb-overlay p { font-size: 14px; color: var(--text-sec); margin: 0 0 14px; line-height: 1.45; }
+        #rb-overlay p b { color: var(--text-main); }
+        .inline-ico { width: 15px; height: 15px; vertical-align: -2px; color: var(--ios-blue); }
+        .drop-ico { width: 34px; height: 34px; margin-bottom: 8px; }
     </style>
 </head>
 <body>
 
     <!-- Overlay drag & drop CSV -->
-    <div id="drop-overlay"><div class="drop-box">📥 Rilascia qui il CSV Rebrickable</div></div>
+    <div id="drop-overlay"><div class="drop-box"><svg class="drop-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg><br>Rilascia qui il CSV Rebrickable</div></div>
     <!-- Notifiche -->
     <div id="toast"></div>
 
@@ -412,6 +425,17 @@
 
             <button class="btn-primary" onclick="saveSettings()">Salva</button>
             <button class="btn-secondary" onclick="closeSettings()">Annulla</button>
+        </div>
+    </div>
+
+    <!-- MODALE "AGGIORNA VENDITE" (refresh guidato da Rebrickable) -->
+    <div id="rb-overlay" onclick="if(event.target===this) closeRbRefresh()">
+        <div class="settings-panel">
+            <h2>Aggiorna vendite</h2>
+            <p>Sto scaricando <b>moc_transactions.csv</b> da Rebrickable con tutto lo storico delle transazioni. Se invece si è aperta la pagina di <b>login</b>, accedi e poi ripremi il tasto <svg class="inline-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>.</p>
+            <p>Quando il download è completato, premi qui sotto e scegli il file (di solito nella cartella <b>Download</b>):</p>
+            <button class="btn-primary" onclick="pickRbCsv()">Importa il CSV scaricato</button>
+            <button class="btn-secondary" onclick="closeRbRefresh()">Annulla</button>
         </div>
     </div>
 
@@ -449,6 +473,14 @@
 
                     <button class="icon-btn" onclick="openSettings()" title="Impostazioni">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                    </button>
+
+                    <button class="icon-btn" id="rb-refresh-btn" onclick="startRbRefresh()" title="Aggiorna vendite da Rebrickable">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="23 4 23 10 17 10"></polyline>
+                            <polyline points="1 20 1 14 7 14"></polyline>
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                        </svg>
                     </button>
 
                     <label for="csv-file" class="icon-btn" id="upload-label">
@@ -627,13 +659,14 @@
         const iconSun = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`;
         const iconUpload = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>`;
         const iconSpinner = `<div class="spinner" style="width:16px; height:16px; margin:0; border-width:2px; border-top-color:var(--ios-orange);"></div>`;
+        const iconAlert = `<svg class="inline-ico" style="color:var(--ios-red)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>`;
         const iconSuccess = `<svg viewBox="0 0 24 24" fill="none" stroke="var(--ios-green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
         const iconError = `<svg viewBox="0 0 24 24" fill="none" stroke="#ff3b30" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>`;
 
         function showError(msg) {
             const errBox = document.getElementById('error-box');
             if(errBox) {
-                errBox.innerHTML = `🔴 Errore: <b>${msg}</b>`;
+                errBox.innerHTML = `${iconAlert} Errore: <b>${msg}</b>`;
                 errBox.style.display = 'block';
             }
             console.error(msg);
@@ -912,6 +945,7 @@
         function processCsvFile(file) {
             if (!file) return;
             if (!/\.csv$/i.test(file.name)) { toast('Serve un file .csv', 'error'); return; }
+            closeRbRefresh(); // se l'import parte dalla modale "Aggiorna vendite", chiudila
 
             const btnLabel = document.getElementById('upload-label');
             btnLabel.innerHTML = iconSpinner;
@@ -1007,6 +1041,59 @@
             });
         })();
 
+        // ════════ TASTO "AGGIORNA VENDITE" (refresh da Rebrickable) ════════
+        // La pagina non può leggere l'export da sola (fetch cross-origin bloccato da CORS
+        // e la sessione Rebrickable vive solo nel browser): il tasto apre l'URL di export
+        // ufficiale — il browser, già loggato, scarica moc_transactions.csv e richiude la
+        // scheda — poi la modale guida l'import del file appena scaricato.
+        const RB_EXPORT_BASE = 'https://rebrickable.com/designers/BRICK_MIND/mocs/sales/export/';
+        const RB_START = '2025-01-01'; // prima della 1ª vendita → l'export copre tutto lo storico
+
+        function rbExportUrl() {
+            const d = new Date(); // data LOCALE (toISOString è UTC e a mezzanotte sbaglierebbe giorno)
+            const end = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+            const u = new URL(RB_EXPORT_BASE);
+            u.searchParams.set('data', 'transactions');
+            u.searchParams.set('range', RB_START + ' - ' + end); // obbligatorio: senza, Rebrickable esporta solo l'ultimo mese
+            u.searchParams.set('moc', '0');
+            return u.href;
+        }
+
+        function startRbRefresh() {
+            // window.open dentro il click = gesto utente → niente popup-blocker.
+            // Se la sessione è scaduta la scheda resta aperta sulla pagina di login.
+            window.open(rbExportUrl(), '_blank');
+            document.getElementById('rb-overlay').classList.add('open');
+        }
+        function closeRbRefresh() {
+            const o = document.getElementById('rb-overlay');
+            if (o) o.classList.remove('open');
+        }
+
+        async function pickRbCsv() {
+            if (window.showOpenFilePicker) {
+                // Chrome/Edge: il picker parte direttamente dalla cartella Download
+                try {
+                    const [h] = await showOpenFilePicker({
+                        startIn: 'downloads',
+                        types: [{ description: 'CSV Rebrickable', accept: { 'text/csv': ['.csv'] } }]
+                    });
+                    processCsvFile(await h.getFile());
+                } catch (e) { /* selezione annullata */ }
+            } else {
+                document.getElementById('csv-file').click(); // Safari/iOS: input classico
+            }
+        }
+
+        // Canale diretto per il refresh automatico via agente: un tab aperto su
+        // rebrickable.com può inviare il CSV con postMessage('CSVDATA::<csv>') e
+        // l'import parte da solo, senza passaggi manuali.
+        window.addEventListener('message', ev => {
+            if (ev.origin !== 'https://rebrickable.com') return;
+            if (typeof ev.data !== 'string' || !ev.data.startsWith('CSVDATA::')) return;
+            processCsvFile(new File([ev.data.slice(9)], 'moc_transactions.csv', { type: 'text/csv' }));
+        });
+
         async function loadDatabaseData() {
             const statusText = document.getElementById('db-status');
             try {
@@ -1020,7 +1107,7 @@
                 }
                 ingestRows(data);
             } catch (err) {
-                statusText.innerHTML = `🔴 Errore DB: <b>${err.message}</b>`;
+                statusText.innerHTML = `${iconAlert} Errore DB: <b>${err.message}</b>`;
                 statusText.style.color = '#ff3b30';
             }
         }
