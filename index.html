@@ -1060,10 +1060,37 @@
         }
 
         function startRbRefresh() {
+            // Con l'estensione "BrickMind Refresh" installata il flusso è a click unico:
+            // la pagina chiede il CSV all'estensione (che ha accesso alla sessione
+            // Rebrickable) e l'import parte da solo, senza modale né download.
+            if (document.documentElement.dataset.bmExt === '1') {
+                rbSetBusy(true);
+                clearTimeout(window.__rbTimeout);
+                window.__rbTimeout = setTimeout(() => {
+                    rbSetBusy(false);
+                    toast('Nessuna risposta dall\'estensione — riprova', 'error');
+                }, 25000);
+                window.postMessage('BRICKMIND_REFRESH_REQ', location.origin);
+                return;
+            }
+            // Fallback senza estensione (es. iPhone/iPad): download guidato.
             // window.open dentro il click = gesto utente → niente popup-blocker.
             // Se la sessione è scaduta la scheda resta aperta sulla pagina di login.
             window.open(rbExportUrl(), '_blank');
             document.getElementById('rb-overlay').classList.add('open');
+        }
+
+        function rbSetBusy(busy) {
+            const btn = document.getElementById('rb-refresh-btn');
+            if (!btn) return;
+            if (busy) {
+                if (!window.__rbIcon) window.__rbIcon = btn.innerHTML;
+                btn.innerHTML = iconSpinner;
+                btn.disabled = true;
+            } else if (window.__rbIcon) {
+                btn.innerHTML = window.__rbIcon;
+                btn.disabled = false;
+            }
         }
         function closeRbRefresh() {
             const o = document.getElementById('rb-overlay');
@@ -1085,12 +1112,26 @@
             }
         }
 
-        // Canale diretto per il refresh automatico via agente: un tab aperto su
-        // rebrickable.com può inviare il CSV con postMessage('CSVDATA::<csv>') e
-        // l'import parte da solo, senza passaggi manuali.
+        // Due canali di consegna automatica del CSV:
+        // 1) estensione "BrickMind Refresh" (stessa finestra): CSVDATA_EXT:: / CSVERR_EXT::
+        // 2) un tab aperto su rebrickable.com (skill/agente): postMessage('CSVDATA::<csv>')
         window.addEventListener('message', ev => {
+            if (typeof ev.data !== 'string') return;
+            if (ev.source === window) {
+                if (ev.data.startsWith('CSVDATA_EXT::')) {
+                    clearTimeout(window.__rbTimeout); rbSetBusy(false);
+                    processCsvFile(new File([ev.data.slice(13)], 'moc_transactions.csv', { type: 'text/csv' }));
+                } else if (ev.data.startsWith('CSVERR_EXT::')) {
+                    clearTimeout(window.__rbTimeout); rbSetBusy(false);
+                    const err = ev.data.slice(12);
+                    toast(err === 'login'
+                        ? 'Sessione Rebrickable scaduta: accedi su rebrickable.com e ripremi il tasto'
+                        : 'Estensione: ' + err, 'error');
+                }
+                return;
+            }
             if (ev.origin !== 'https://rebrickable.com') return;
-            if (typeof ev.data !== 'string' || !ev.data.startsWith('CSVDATA::')) return;
+            if (!ev.data.startsWith('CSVDATA::')) return;
             processCsvFile(new File([ev.data.slice(9)], 'moc_transactions.csv', { type: 'text/csv' }));
         });
 
